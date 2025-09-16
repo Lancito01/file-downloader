@@ -1,0 +1,15 @@
+@font-face {
+    font-family: "Sohne Breit";
+    src: url("$lib/fonts/TestSohneBreit-Buch.otf") format("opentype");
+    font-weight: normal;
+}
+
+h1,
+h2,
+p {
+    margin: 0;
+}
+
+$font: "Sohne Breit";
+$font-color: white;
+$background-color: #222;

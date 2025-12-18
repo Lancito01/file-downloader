@@ -1,11 +1,21 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::Manager;
+
 fn main() {
-    // app_lib::run();
     tauri::Builder::default()
-        // .invoke_handler(tauri::generate_handler![greet, shout])
         .invoke_handler(tauri::generate_handler![list_folders, download_from_link])
+        .setup(|app| {
+            println!("Tauri app is starting...");
+            // Store the resource path for use in commands
+            let resource_path = app
+                .path()
+                .resource_dir()
+                .expect("failed to get resource dir");
+            app.manage(resource_path);
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -24,15 +34,22 @@ fn main() {
 use std::path::Path;
 #[tauri::command]
 fn list_folders(path: &str) -> Vec<String> {
+    println!("list_folders called with path: {}", path);
     let mut folders = Vec::new();
-    if let Ok(entries) = std::fs::read_dir(Path::new(path)) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    folders.push(name.to_string());
+    match std::fs::read_dir(Path::new(path)) {
+        Ok(entries) => {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                        folders.push(name.to_string());
+                    }
                 }
             }
+            println!("Found {} folders", folders.len());
+        }
+        Err(e) => {
+            println!("Error reading directory: {}", e);
         }
     }
     folders
@@ -40,36 +57,84 @@ fn list_folders(path: &str) -> Vec<String> {
 
 use std::path::PathBuf;
 use std::process::Command;
+use tauri::State;
+
 #[tauri::command]
-fn download_from_link(link: &str, folder: &str, format: &str, extension: &str) -> String {
+fn download_from_link(
+    link: &str,
+    folder: &str,
+    format: &str,
+    extension: &str,
+    resource_path: State<'_, PathBuf>,
+) -> bool {
     // Build the output template
-    let output_template = format!("{}/%(title)s.{}", folder, extension);
+    // Constructs a file output path template using the specified folder and file extension.
+    //
+    // The template uses `%(title)s` as a placeholder for the downloaded file's title,
+    // which will be replaced at runtime with the actual filename.
+    //
+    // Arguments
+    // * `link` - The URL link to download from (e.g., YouTube video/playlist, SoundCloud song, etc.)
+    // * `folder` - The destination directory path where the file will be saved
+    // * `format` - String format of download for code logic purposes only (e.g., "audio" or "video")
+    // * `extension` - The file extension (without the leading dot) for the output file
+    //
+    // Example
+    // If `folder` is `/downloads` and `extension` is `mp4`, the resulting template
+    // will be `/downloads/%(title)s.mp4`
+    //
+    // * Function will use yt-dlp to download the media from the provided link.
+    // * yt-dlp is in ../bin/yt-dlp.exe, relative to this very file.
+    // * From project root, the file tree is as follows:
+    // * project/
+    // *    └──src-tauri/
+    // *       ├── src/
+    // *       │   └── main.rs
+    // *       └── bin/
+    // *           └── yt-dlp.exe
 
-    // Path to yt-dlp.exe (relative to the executable)
-    let mut exe_path = std::env::current_exe().unwrap_or_default();
-    exe_path.pop(); // remove the exe name
-    exe_path.push("bin");
-    exe_path.push("yt-dlp.exe");
+    // Get the path to yt-dlp.exe from the bundled resources
+    let yt_dlp_path = resource_path.inner().join("bin").join("yt-dlp.exe");
 
-    // Build yt-dlp arguments
-    let mut args = vec![link, "-o", &output_template];
-    if format == "audio" {
-        args.push("-x");
-        args.push("--audio-format");
-        args.push(extension);
+    println!("Starting download from: {}", link);
+    println!("Using yt-dlp from: {}", yt_dlp_path.display());
+
+    // Build command arguments based on format
+    let mut cmd = Command::new(&yt_dlp_path);
+    cmd.current_dir(folder);  // Files will be saved to this directory
+
+    // Add format-specific arguments
+    if format.contains("audio") {
+        cmd.arg("-x");
+        cmd.arg("--audio-format");
+        cmd.arg(extension);
+
+        if format.contains("music") {
+            cmd.arg("--embed-metadata");
+            cmd.arg("--embed-thumbnail");
+            cmd.arg("--audio-quality");
+            cmd.arg("0");
+        }
     }
 
-    // Run yt-dlp
-    let output = Command::new(exe_path).args(&args).output();
+    // Add link
+    cmd.arg(link);
 
-    match output {
+    // Execute the command
+    match cmd.output() {
         Ok(output) => {
             if output.status.success() {
-                "Download successful".to_string()
+                println!("Download completed successfully for: {}", link);
+                true
             } else {
-                format!("yt-dlp failed: {}", String::from_utf8_lossy(&output.stderr))
+                let error_msg = String::from_utf8_lossy(&output.stderr);
+                println!("Download failed: {}", error_msg);
+                false
             }
         }
-        Err(e) => format!("Failed to run yt-dlp: {}", e),
+        Err(e) => {
+            println!("Error executing yt-dlp: {}", e);
+            false
+        }
     }
 }

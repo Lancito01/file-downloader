@@ -5,20 +5,35 @@ use tauri::Manager;
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![list_folders, download_from_link])
+        // ✅ Store plugin
+        .plugin(tauri_plugin_store::Builder::default().build())
+
+        // ✅ Dialog plugin
+        .plugin(tauri_plugin_dialog::init())
+
+        // ✅ Your commands
+        .invoke_handler(tauri::generate_handler![
+            list_folders,
+            download_from_link
+        ])
+
+        // ✅ Setup logic
         .setup(|app| {
             println!("Tauri app is starting...");
-            // Store the resource path for use in commands
+
             let resource_path = app
                 .path()
                 .resource_dir()
                 .expect("failed to get resource dir");
+
             app.manage(resource_path);
             Ok(())
         })
+
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
 
 // #[tauri::command]
 // fn greet(name: &str) -> String {

@@ -1,16 +1,19 @@
-/* @font-face {
+@font-face {
     font-family: "Sohne Breit";
     src: url("$lib/fonts/TestSohneBreit-Buch.otf") format("opentype");
     font-weight: normal;
-} */
+}
 
 h1,
 h2,
+h3,
+h4,
 p {
     margin: 0;
 }
 
-$font: Arial, sans-serif;
+$font: "Montserrat", "Times New Roman";
 $font-color: white;
-$background-color: #222;
-$button-color: rgb(38, 109, 167);
+$background-color: #212121;
+$secondary-background-color: #212121cc;
+$accent-color: #f5b11b;

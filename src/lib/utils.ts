@@ -63,6 +63,10 @@ export const status = writable<Status>({
     type: null,
     message: "",
 });
+
+export const setStatus = (message: string, type: Status["type"]): void => {
+    status.set({ message: message, type: type });
+};
 export async function saveDownloadFolderSetting() {
     if (get(selectedDownloadFolder)) {
         await updateSettingsWithKey(

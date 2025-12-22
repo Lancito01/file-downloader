@@ -3,16 +3,32 @@
 
     import { SETTINGS_KEYS } from "$lib/assets/keys";
     import { Store } from "@tauri-apps/plugin-store";
+    import {
+        browseFolder,
+        saveDownloadFolderSetting,
+        setStatus,
+        status,
+    } from "$lib/utils";
+    import { selectedDownloadFolder } from "$lib/utils";
+    import { get } from "svelte/store";
 
     let settings: Store | null = null;
-    let musicPath: string | null | undefined;
-    let settingsEntries: any[] = [];
+    let settingsEntries: [string, any][] = [];
     onMount(async () => {
         settings = await Store.load("settings.json");
 
-        musicPath = await settings.get(SETTINGS_KEYS.MUSIC_FOLDER_PATH.id);
         settingsEntries = await settings.entries();
     });
+
+    async function saveSettings() {
+        // * Music
+        saveDownloadFolderSetting();
+
+        setStatus("Settings saved successfully!", "success");
+
+        // ? Reload settings entries
+        settingsEntries = await settings!.entries();
+    }
 </script>
 
 <div class="settings-container">
@@ -31,10 +47,11 @@
                             {value}
                         </p>
                     </div>
-                    <button> Change </button>
+                    <button on:click={browseFolder}> Change </button>
                 </div>
             {/each}
         </div>
+        <button id="save-settings" on:click={saveSettings}>Save</button>
     </div>
 </div>
 
@@ -56,12 +73,16 @@
             width: 100%;
             border-radius: 5px;
             padding: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
 
             .settings-entries {
                 margin: 10px 0 0 0;
                 display: flex;
                 flex-direction: column;
-                gap: 10px;
+                gap: 7px;
+                height: 100%;
 
                 .setting-entry {
                     display: flex;
@@ -82,6 +103,23 @@
                             margin: 0;
                         }
                     }
+                }
+            }
+
+            #save-settings {
+                width: 100px;
+                align-self: center;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 5px;
+                background-color: $background-color;
+                color: $accent-color;
+                font-size: 1rem;
+                cursor: pointer;
+                transition: background-color 0.1s ease-in-out;
+
+                &:hover {
+                    background-color: darken($background-color, $amount: 10%);
                 }
             }
         }

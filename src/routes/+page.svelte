@@ -1,96 +1,27 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { SETTINGS_KEYS } from "$lib/assets/keys";
-    import { Store } from "@tauri-apps/plugin-store";
+    import {
+        readSettingsWithKey,
+        status,
+        updateStatus,
+        getStatusColor,
+        initializeSettings,
+    } from "$lib/utils.ts";
+    import {
+        selectedDownloadFolder,
+        browseFolder,
+        saveDownloadFolderSetting,
+    } from "$lib/utils.ts";
+    import { firstRun } from "$lib/utils.ts";
 
-    const updateSettingsWithKey = async (
-        key: string,
-        value: any
-    ): Promise<void> => {
-        if (settings) {
-            await settings.set(key, value);
-            await settings.save();
-        }
-    };
-
-    const readSettingsWithKey = async (key: string): Promise<any | null> => {
-        if (settings) {
-            return await settings.get(key);
-        }
-        return null;
-    };
-
-    let settings: Store | null = null;
-    let musicPath: string | null | undefined;
-
-    onMount(async () => {
-        settings = await Store.load("settings.json");
-
-        musicPath = await settings.get(SETTINGS_KEYS.MUSIC_FOLDER_PATH);
-        if (!musicPath) {
-            firstRun = true;
-        }
-    });
-
-    import { open } from "@tauri-apps/plugin-dialog";
     import Single from "./tabs/Single.svelte";
     import Bulk from "./tabs/Bulk.svelte";
     import Settings from "./tabs/Settings.svelte";
-    let selectedFolder = "";
-    async function browseFolder() {
-        const result = await open({
-            directory: true,
-            multiple: false,
-            title: "Select Music folder",
-        });
 
-        if (typeof result === "string") {
-            selectedFolder = result;
-            status.type = "warning";
-            status.message = `Selected folder ${selectedFolder}`;
-        }
-    }
-
-    async function saveSettings() {
-        if (selectedFolder) {
-            await updateSettingsWithKey(
-                SETTINGS_KEYS.MUSIC_FOLDER_PATH,
-                selectedFolder
-            );
-            firstRun = false;
-            status.type = "success";
-            status.message = "Settings saved successfully.";
-        } else {
-            status.type = "error";
-            status.message = "Please select a folder before saving.";
-        }
-    }
-
-    function getStatusColor() {
-        switch (status.type) {
-            case "success":
-                return "#4dff88";
-            case "error":
-                return "#ff4d4d";
-            case "warning":
-                return "#ffd24d";
-            default:
-                return "white";
-        }
-    }
-
-    type Status = {
-        type: "info" | "success" | "error" | "warning";
-        message: string;
-    };
-
-    let firstRun = false;
-    let status: Status = {
-        type: "info",
-        message: "Idle 🌙",
-    };
+    // * Automatic changing of status color based on detection of status.type
     $: {
-        if (status.type) {
+        if ($status.type) {
             statusColor = getStatusColor();
         }
     }
@@ -98,11 +29,33 @@
 
     let activeTab: string = "single";
 
-    $: console.log(selectedFolder);
+    onMount(async () => {
+        // ! Initialization of settings store
+        await initializeSettings();
+        
+        const downloadFolder = await readSettingsWithKey(
+            SETTINGS_KEYS.MUSIC_FOLDER_PATH.id
+        );
+        if (!downloadFolder) {
+            firstRun.set(true);
+            updateStatus({
+                type: "error",
+                message: "Please set your default Music folder to continue.",
+            });
+        } else {
+            firstRun.set(false);
+        }
+   
+        // * Set initial status
+        updateStatus({
+            type: "info",
+            message: "Idle 🌙",
+        });
+    });
 </script>
 
 <div class="app-container">
-    {#if firstRun}
+    {#if $firstRun}
         <div class="first-run">
             <h1>Welcome to Andy's Downloader!</h1>
             <p>Please configure your settings to get started.</p>
@@ -110,14 +63,16 @@
                 <div class="musicFolder">
                     <h4>1️⃣ First, choose your default Music folder:</h4>
                     <button on:click={browseFolder}>Select Music Folder</button>
-                    {#if selectedFolder}
-                        <p>{selectedFolder}</p>
+                    {#if $selectedDownloadFolder}
+                        <p>{$selectedDownloadFolder}</p>
                     {/if}
                 </div>
             </div>
             <div class="confirm">
                 <h2 class="confirm">Everything looks good? ⬇️</h2>
-                <button class="confirm" on:click={saveSettings}>Save</button>
+                <button class="confirm" on:click={saveDownloadFolderSetting}
+                    >Save</button
+                >
             </div>
         </div>
     {/if}
@@ -156,7 +111,7 @@
         <div class="status">
             <p>
                 Status: <span style="color: {statusColor};"
-                    >{status.message}</span
+                    >{$status.message}</span
                 >
             </p>
         </div>
@@ -183,7 +138,7 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
+            height: calc(100% - 34px);
             width: 100%;
             text-align: center;
 
@@ -250,6 +205,24 @@
                 width: 100%;
                 height: calc(100% - 28px - 34px);
             }
+            .status {
+                font-family: $font;
+                width: 100%;
+                height: 34px;
+                background-color: lighten($background-color, 5%);
+                color: $font-color;
+                font-size: 14px;
+                display: flex;
+                align-items: center;
+                padding: 0 10px;
+                z-index: 100 !important;
+                p {
+                    width: 100%;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    text-wrap: nowrap;
+                }
+            }
         }
 
         // elements
@@ -265,25 +238,6 @@
             &:hover {
                 background-color: darken($accent-color, 10%);
             }
-        }
-    }
-
-    .status {
-        font-family: $font;
-        width: 100%;
-        height: 34px;
-        background-color: lighten($background-color, 5%);
-        color: $font-color;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        padding: 0 10px;
-        z-index: 100;
-        p {
-            width: 100%;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-wrap: nowrap;
         }
     }
 </style>

@@ -187,9 +187,11 @@
 
         .app {
             height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
             nav {
-                height: 0%;
-                min-height: 28px;
+                height: 28px;
                 background-color: lighten($background-color, 5%);
 
                 button {
@@ -203,7 +205,7 @@
             .render-tab {
                 z-index: 40;
                 width: 100%;
-                height: calc(100% - 28px - 34px);
+                flex-grow: 1;
             }
             .status {
                 font-family: $font;

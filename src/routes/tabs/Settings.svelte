@@ -47,7 +47,9 @@
                             {value}
                         </p>
                     </div>
-                    <button on:click={browseFolder}> Change </button>
+                    <button class="change-setting" on:click={browseFolder}>
+                        Change
+                    </button>
                 </div>
             {/each}
         </div>
@@ -89,18 +91,39 @@
                     flex-direction: row;
                     padding: 6px 3px;
                     justify-content: space-between;
+                    align-content: center;
                     background-color: $background-color;
                     border-radius: 5px;
                     border-bottom: 1px solid $font-color;
 
                     .setting-entry-values {
-                        flex-grow: 1;
                         display: flex;
                         flex-direction: row;
+                        flex-grow: 1;
+                        align-items: center;
+                        height: 100%;
                         gap: 4px;
 
                         p {
                             margin: 0;
+                        }
+                    }
+
+                    .change-setting {
+                        padding: 7px 8px;
+                        border: none;
+                        border-radius: 5px;
+                        background-color: darken($accent-color, 10%);
+                        color: $background-color;
+                        font-size: 0.9rem;
+                        cursor: pointer;
+                        transition: background-color 0.1s ease-in-out;
+
+                        &:hover {
+                            background-color: darken(
+                                $accent-color,
+                                $amount: 10%
+                            );
                         }
                     }
                 }
@@ -117,6 +140,7 @@
                 font-size: 1rem;
                 cursor: pointer;
                 transition: background-color 0.1s ease-in-out;
+                box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 
                 &:hover {
                     background-color: darken($background-color, $amount: 10%);

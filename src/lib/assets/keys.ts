@@ -11,6 +11,5 @@ export const SETTINGS_KEYS = {
 
 export const FORMATS = {
     VIDEO: "video",
-    SOUND: "audio/sound",
-    MUSIC: "audio/music",
+    AUDIO: "audio",
 } as const;

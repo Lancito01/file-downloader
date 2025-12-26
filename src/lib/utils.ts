@@ -94,7 +94,7 @@ export function getStatusColor(): string {
         case "error":
             return "#ff4d4d";
         case "warning":
-            return "#ffd24d";
+            return "#fec600";
         default:
             return "white";
     }

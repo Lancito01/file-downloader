@@ -80,6 +80,7 @@ fn download_from_link(
     folder: &str,
     format: &str,
     extension: &str,
+    embeds: bool,
     resource_path: State<'_, PathBuf>,
 ) -> bool {
     // Build the output template
@@ -119,21 +120,21 @@ fn download_from_link(
     cmd.current_dir(folder);  // Files will be saved to this directory
 
     // Add format-specific arguments
-    if format.contains("audio") {
+    if format == "audio" {
         cmd.arg("-x");
         cmd.arg("--audio-format");
-        cmd.arg(extension);
-
-        if format.contains("music") {
-            cmd.arg("--embed-metadata");
-            cmd.arg("--embed-thumbnail");
-            cmd.arg("--audio-quality");
-            cmd.arg("0");
-        }
+    } else {
+        cmd.arg("--merge-output-format");
     }
-
+    cmd.arg(extension);
+    
     // Add link
     cmd.arg(link);
+
+    if embeds {
+        cmd.arg("--embed-thumbnail");
+        cmd.arg("--embed-metadata");
+    }
 
     // Execute the command
     match cmd.output() {

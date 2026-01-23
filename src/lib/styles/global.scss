@@ -22,7 +22,8 @@ $font-ui: "Inter", system-ui;
 $font-mono: monospace;
 
 //? Colors - core
-$bg: #212121;
+$bg0: #000000;
+$bg1: lighten($bg0, $amount: 5%);
 $surface: #1a1a1a;
 $surface-alt: #202020;
 

@@ -39,30 +39,27 @@
     <h2 class="text-2xl max-w-max">⚙️ Settings</h2>
 
     <div class="flex flex-col gap-2 mt-2 h-full">
-        {#each settingsEntries as [key, v]}
-            <div class="setting-entry flex flex-col p-1">
-                <p class="mb-2 text-sm text-gray-300">
-                    {Object.values(SETTINGS_KEYS).find(
-                        (item) => item.id === key
-                    )!.text}:
-                </p>
+        <div class="setting-entry flex flex-col p-1">
+            <p class="mb-2 text-sm text-gray-300">
+                Music Download Folder:
+            </p>
 
-                <div class="value flex items-center gap-2 w-full">
-                    <p
-                        class="setting-p grow h-full p-2 rounded text-base overflow-ellipsis"
-                    >
-                        {$selectedDownloadFolder}
-                        <!-- TODO: make this dynamic ? -->
-                    </p>
-                    <button class="change-setting-btn" on:click={browseFolder}>
-                        Change
-                    </button>
-                </div>
+            <div class="value flex items-center gap-2 w-full">
+                <p
+                    class="setting-p grow h-full p-2 rounded text-base overflow-ellipsis"
+                >
+                    {$selectedDownloadFolder}
+                    <!-- TODO: make this dynamic ? -->
+                </p>
+                <button class="change-setting-btn" on:click={browseFolder}>
+                    Change
+                </button>
             </div>
-        {/each}
+        </div>
     </div>
     <button
         class="save-btn w-1/2 font-bold h-8.5 self-center max-w-2xl rounded"
+        on:click={saveSettings}
     >
         Save
     </button>
@@ -74,7 +71,7 @@
     .setting-entry {
         .value {
             p {
-                background-color: $bg;
+                background-color: $bg0;
                 border-bottom: 1px solid $accent;
                 font-family: $font-mono;
             }
@@ -97,12 +94,12 @@
     }
 
     .change-setting-btn:hover {
-        background-color: lighten($bg, 10%);
+        background-color: lighten($bg0, 10%);
     }
 
     .save-btn {
         background-color: $accent;
-        color: $bg;
+        color: $bg0;
         cursor: pointer;
         transition: background-color 0.1s ease-in-out;
         box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);

@@ -58,6 +58,13 @@ export async function browseFolder() {
     }
 }
 
+//* Always synchronizes `lastActiveTab` with the settings store.
+export const activeTab = writable<string>("single");
+export const setActiveTab = async (tab: string): Promise<void> => {
+    activeTab.set(tab);
+    await updateSettingsWithKey(SETTINGS_KEYS.ACTIVE_TAB.id, tab);
+};
+
 export const firstRun = writable<boolean>(false);
 export const status = writable<Status>({
     type: null,

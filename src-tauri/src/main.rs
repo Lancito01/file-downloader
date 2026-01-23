@@ -7,16 +7,10 @@ fn main() {
     tauri::Builder::default()
         // ✅ Store plugin
         .plugin(tauri_plugin_store::Builder::default().build())
-
         // ✅ Dialog plugin
         .plugin(tauri_plugin_dialog::init())
-
         // ✅ Your commands
-        .invoke_handler(tauri::generate_handler![
-            list_folders,
-            download_from_link
-        ])
-
+        .invoke_handler(tauri::generate_handler![list_folders, download_from_link])
         // ✅ Setup logic
         .setup(|app| {
             println!("Tauri app is starting...");
@@ -29,11 +23,9 @@ fn main() {
             app.manage(resource_path);
             Ok(())
         })
-
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
-
 
 // #[tauri::command]
 // fn greet(name: &str) -> String {
@@ -79,7 +71,7 @@ fn download_from_link(
     link: &str,
     folder: &str,
     format: &str,
-    extension: &str,
+    extension: Option<&str>,
     embeds: bool,
     resource_path: State<'_, PathBuf>,
 ) -> bool {
@@ -117,17 +109,19 @@ fn download_from_link(
 
     // Build command arguments based on format
     let mut cmd = Command::new(&yt_dlp_path);
-    cmd.current_dir(folder);  // Files will be saved to this directory
+    cmd.current_dir(folder); // Files will be saved to this directory
 
     // Add format-specific arguments
-    if format == "audio" {
-        cmd.arg("-x");
-        cmd.arg("--audio-format");
-    } else {
-        cmd.arg("--merge-output-format");
+    if let Some(ext) = extension {
+        if format == "audio" {
+            cmd.arg("-x");
+            cmd.arg("--audio-format");
+        } else {
+            cmd.arg("--merge-output-format");
+        }
+        cmd.arg(ext);
     }
-    cmd.arg(extension);
-    
+
     // Add link
     cmd.arg(link);
 

@@ -1,7 +1,7 @@
 export const SETTINGS_KEYS = {
-    LAST_TAB: {
-        id: "lastTab",
-        text: "Last Opened Tab",
+    ACTIVE_TAB: {
+        id: "activeTab",
+        text: "Active Tab",
     },
     MUSIC_FOLDER_PATH: {
         id: "musicFolderPath",

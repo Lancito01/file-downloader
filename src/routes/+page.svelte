@@ -14,10 +14,13 @@
         saveDownloadFolderSetting,
     } from "$lib/utils.ts";
     import { firstRun } from "$lib/utils.ts";
+    import { activeTab } from "$lib/utils.ts";
 
     import Single from "./tabs/Single.svelte";
     import Bulk from "./tabs/Bulk.svelte";
     import Settings from "./tabs/Settings.svelte";
+    import Nav from "./Nav.svelte";
+    import StatusBar from "./StatusBar.svelte";
 
     // * Automatic changing of status color based on detection of status.type
     $: {
@@ -26,8 +29,6 @@
         }
     }
     let statusColor = "white";
-
-    let activeTab: string = "single";
 
     onMount(async () => {
         // ! Initialization of settings store
@@ -79,66 +80,31 @@
             </div>
         </div>
     {/if}
-    <div class="app flex flex-col h-full justify-between">
-        <nav class="flex flex-row items-center h-8 gap-2">
-            <button
-                type="button"
-                class:active={activeTab == "single"}
-                aria-pressed={activeTab == "single"}
-                on:click={() => (activeTab = "single")}
-            >
-                1️⃣ Single Download
-            </button>
-
-            <button
-                type="button"
-                class:active={activeTab == "bulk"}
-                aria-pressed={activeTab == "bulk"}
-                on:click={() => (activeTab = "bulk")}
-            >
-                🎒 Bulk Download
-            </button>
-
-            <button
-                type="button"
-                class:active={activeTab == "settings"}
-                aria-pressed={activeTab == "settings"}
-                on:click={() => (activeTab = "settings")}
-            >
-                ⚙️ Settings
-            </button>
-        </nav>
+    <div class="app flex flex-col h-full">
+        <Nav />
         <div
             class="render-tab flex justify-center items-center p-1.5 z-40 w-full h-full grow"
         >
             <div
                 class="container flex flex-col w-full h-full rounded-lg items-center max-w-full p-5"
             >
-                {#if activeTab == "single"}
+                {#if $activeTab == "single"}
                     <Single />
-                {:else if activeTab == "bulk"}
+                {:else if $activeTab == "bulk"}
                     <Bulk />
-                {:else if activeTab == "settings"}
+                {:else if $activeTab == "settings"}
                     <Settings />
                 {/if}
             </div>
         </div>
-        <div
-            class="status flex flex-row w-full h-9 items-center z-50 px-2.5 text-sm"
-        >
-            <p class="w-full h-full overflow-hidden flex items-center">
-                Status: <span style="color: {statusColor};"
-                    >{$status.message}</span
-                >
-            </p>
-        </div>
+        <StatusBar />
     </div>
 </div>
 
 <style lang="scss">
     @import "$lib/styles/global.scss";
     .app-container {
-        background-color: $bg;
+        background-color: $bg0;
         color: $text;
         height: 100vh;
         width: 100vw;
@@ -161,7 +127,7 @@
                     width: 100%;
 
                     padding: 5px;
-                    background: lighten($bg, $amount: 5%);
+                    background: $bg1;
                     border-radius: 5px;
 
                     align-items: center;
@@ -170,42 +136,13 @@
         }
 
         .app {
-            nav {
-                background-color: lighten($bg, 5%);
-
-                button {
-                    height: 100%;
-                    background-color: lighten($bg, 5%);
-                    border: $accent 1px solid;
-                    border-bottom: none;
-                    border-radius: 4px 4px 0 0;
-                    color: $text;
-                    cursor: pointer;
-                    padding: 5px 5px;
-                    margin: 2px 2px 0 2px;
-
-                    transition: background-color 0.1s ease-in-out;
-
-                    &:hover {
-                        background-color: lighten($bg, 10%);
-                    }
-
-                    &.active {
-                        background-color: $bg;
-                    }
-                }
-            }
+            
             .render-tab {
-                background-color: $bg;
+                background-color: $bg0;
 
                 .container {
-                    background-color: lighten($bg, $amount: 5%);
+                    background-color: $bg1;
                 }
-            }
-            .status {
-                font-family: $font-mono;
-                background-color: lighten($bg, 5%);
-                color: $text;
             }
         }
     }

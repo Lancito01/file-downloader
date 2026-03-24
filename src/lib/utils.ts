@@ -1,6 +1,7 @@
-import { SETTINGS_KEYS } from "$lib/assets/keys";
+import { SETTINGS_KEYS, FORMATS } from "$lib/assets/keys";
 import { Store } from "@tauri-apps/plugin-store";
-import { writable } from "svelte/store";
+import { writable, get } from "svelte/store";
+import { invoke } from "@tauri-apps/api/core";
 
 export let settings: Store | null = null;
 
@@ -9,8 +10,35 @@ export type Status = {
     message: string;
 };
 
+export type DownloadFormat = (typeof FORMATS)[keyof typeof FORMATS];
+
+export type DownloadPayload = {
+    link: string;
+    folder?: string;
+    format: DownloadFormat;
+    extension?: string;
+    embeds?: boolean;
+};
+
+export type DownloadResult = {
+    success: boolean;
+    message: string;
+};
+
 export const initializeSettings = async (): Promise<void> => {
     settings = await Store.load("settings.json");
+    
+    // Load saved format preference
+    const savedFormat = await settings.get(SETTINGS_KEYS.DEFAULT_FORMAT.id);
+    if (savedFormat && (savedFormat === FORMATS.AUDIO || savedFormat === FORMATS.VIDEO)) {
+        defaultFormat.set(savedFormat);
+    }
+    
+    // Load embed metadata preference
+    const savedEmbed = await settings.get(SETTINGS_KEYS.EMBED_METADATA.id);
+    if (typeof savedEmbed === 'boolean') {
+        embedMetadata.set(savedEmbed);
+    }
 };
 
 export const updateStatus = (newStatus: Status): void => {
@@ -74,6 +102,7 @@ export const status = writable<Status>({
 export const setStatus = (message: string, type: Status["type"]): void => {
     status.set({ message: message, type: type });
 };
+
 export async function saveDownloadFolderSetting() {
     if (get(selectedDownloadFolder)) {
         await updateSettingsWithKey(
@@ -85,15 +114,16 @@ export async function saveDownloadFolderSetting() {
             type: "success",
             message: "Download folder saved successfully.",
         });
+        return true;
     } else {
         status.set({
             type: "error",
             message: "Please select a valid download folder.",
         });
+        return false;
     }
 }
 
-import { get } from "svelte/store";
 export function getStatusColor(): string {
     switch (get(status).type) {
         case "success":
@@ -104,5 +134,37 @@ export function getStatusColor(): string {
             return "#fec600";
         default:
             return "white";
+    }
+}
+
+// New stores for download settings
+export const defaultFormat = writable<DownloadFormat>(FORMATS.AUDIO);
+export const embedMetadata = writable<boolean>(true);
+
+// Download function
+export async function downloadFromLink(payload: DownloadPayload): Promise<DownloadResult> {
+    const trimmedLink = payload.link?.trim();
+    if (!trimmedLink) {
+        throw new Error("Please provide a link to download.");
+    }
+
+    const folder = payload.folder?.trim() ?? get(selectedDownloadFolder);
+    if (!folder) {
+        throw new Error("Please set a download folder in Settings first.");
+    }
+
+    try {
+        const result = await invoke<DownloadResult>("download_from_link", {
+            link: trimmedLink,
+            folder,
+            format: payload.format,
+            extension: payload.extension?.trim() || null,
+            embeds: payload.embeds ?? get(embedMetadata),
+        });
+        
+        return result;
+    } catch (error) {
+        console.error("Download error:", error);
+        throw new Error(error instanceof Error ? error.message : String(error));
     }
 }

@@ -66,6 +66,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use tauri::State;
 
+#[derive(serde::Serialize)]
+struct DownloadResult {
+    success: bool,
+    message: String,
+}
+
 #[tauri::command]
 fn download_from_link(
     link: &str,
@@ -74,7 +80,7 @@ fn download_from_link(
     extension: Option<&str>,
     embeds: bool,
     resource_path: State<'_, PathBuf>,
-) -> bool {
+) -> DownloadResult {
     // Build the output template
     // Constructs a file output path template using the specified folder and file extension.
     //
@@ -134,17 +140,27 @@ fn download_from_link(
     match cmd.output() {
         Ok(output) => {
             if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
                 println!("Download completed successfully for: {}", link);
-                true
+                DownloadResult {
+                    success: true,
+                    message: format!("Download completed successfully: {}", link),
+                }
             } else {
                 let error_msg = String::from_utf8_lossy(&output.stderr);
                 println!("Download failed: {}", error_msg);
-                false
+                DownloadResult {
+                    success: false,
+                    message: format!("Download failed: {}", error_msg.lines().next().unwrap_or("Unknown error")),
+                }
             }
         }
         Err(e) => {
             println!("Error executing yt-dlp: {}", e);
-            false
+            DownloadResult {
+                success: false,
+                message: format!("Failed to execute yt-dlp: {}. Make sure yt-dlp.exe is bundled with the app.", e),
+            }
         }
     }
 }

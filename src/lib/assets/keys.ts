@@ -7,6 +7,14 @@ export const SETTINGS_KEYS = {
         id: "musicFolderPath",
         text: "Music Folder Path",
     },
+    DEFAULT_FORMAT: {
+        id: "defaultFormat",
+        text: "Default Download Format",
+    },
+    EMBED_METADATA: {
+        id: "embedMetadata",
+        text: "Embed artwork and metadata",
+    },
 } as const;
 
 export const FORMATS = {

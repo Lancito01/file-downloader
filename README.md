@@ -4,6 +4,99 @@ A modern, elegant desktop application for downloading audio and video content us
 
 ![File Downloader](https://img.shields.io/badge/Tauri-2.8+-blue) ![Svelte](https://img.shields.io/badge/Svelte-5.0+-orange) ![Rust](https://img.shields.io/badge/Rust-1.77+-red)
 
+## 🚀 Quick Start
+
+### Option 1: Easy Launch (Recommended)
+
+**Windows PowerShell:**
+```powershell
+.\setup-and-run.ps1
+```
+
+**Windows Command Prompt:**
+```cmd
+run.bat
+```
+
+These scripts will:
+- ✅ Check and configure your environment
+- ✅ Download yt-dlp if missing
+- ✅ Load Visual Studio environment if installed
+- ✅ Launch the app
+
+### Option 2: Manual Setup
+
+If the scripts don't work or you prefer manual setup:
+
+1. **Install Prerequisites:**
+   - ✅ [Node.js](https://nodejs.org/) (v18+)
+   - ✅ [Rust](https://rustup.rs/)
+   - ✅ [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+     - During installation, select "Desktop development with C++"
+     - Include Windows 10/11 SDK
+
+2. **Download yt-dlp:**
+   - Get from: https://github.com/yt-dlp/yt-dlp/releases/latest
+   - Place `yt-dlp.exe` in `src-tauri/bin/`
+
+3. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
+
+4. **Launch:**
+   ```bash
+   npm run tauri dev
+   ```
+
+## ⚠️ Troubleshooting
+
+### "linker 'link.exe' not found"
+
+**Cause:** Visual Studio Build Tools not installed or not in PATH.
+
+**Solutions:**
+1. **Install Visual Studio Build Tools:**
+   - Download from: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+   - Select "Desktop development with C++"
+   - Restart your computer after installation
+
+2. **OR use the provided scripts:** `setup-and-run.ps1` or `run.bat` will configure the environment
+
+3. **OR run from VS Developer Command Prompt:**
+   - Open "x64 Native Tools Command Prompt for VS 2022" from Start Menu
+   - Navigate to project folder
+   - Run `npm run tauri dev`
+
+### "cargo not found"
+
+**Cause:** Rust not installed or not in PATH.
+
+**Solution:**
+1. Install Rust from https://rustup.rs/
+2. Restart your terminal
+3. Verify: `cargo --version`
+
+### "yt-dlp not found" or Downloads Failing
+
+**Cause:** yt-dlp.exe missing from `src-tauri/bin/`
+
+**Solution:**
+1. Download: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
+2. Place in: `src-tauri\bin\yt-dlp.exe`
+
+### First Compilation Takes Forever
+
+**Normal:** Rust compilation takes 2-5 minutes on first run. Subsequent launches are fast.
+
+### App Window Won't Open
+
+**Try:**
+1. Check if port 5173 is in use by another app
+2. Restart your computer (applies Visual Studio installation)
+3. Run from command prompt with administrator privileges
+4. Check for errors in the terminal window
+
 ## ✨ Features
 
 ### 🎵 Single Downloads
@@ -26,42 +119,6 @@ A modern, elegant desktop application for downloading audio and video content us
 - Configure default format preferences (audio/video)
 - Toggle metadata embedding by default
 - Settings persist across sessions
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- npm or pnpm
-- Rust (v1.77 or higher) - for building from source
-- yt-dlp executable (should be bundled in `src-tauri/bin/yt-dlp.exe`)
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd "File Downloader"
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Ensure yt-dlp is present**
-   - Download yt-dlp.exe from https://github.com/yt-dlp/yt-dlp/releases
-   - Place it in `src-tauri/bin/yt-dlp.exe`
-
-4. **Run in development mode**
-   ```bash
-   npm run tauri dev
-   ```
-
-5. **Build for production**
-   ```bash
-   npm run tauri build
-   ```
 
 ## 📖 Usage
 
@@ -122,7 +179,6 @@ A modern, elegant desktop application for downloading audio and video content us
 - **TypeScript**: Type-safe JavaScript
 - **Vite**: Fast build tool and dev server
 - **SCSS**: Enhanced CSS with variables and functions
-- **Tailwind CSS**: Utility-first CSS (for some components)
 
 ### Backend
 - **Tauri 2.8**: Lightweight Rust framework for desktop apps
@@ -155,8 +211,10 @@ File Downloader/
 │   │   ├── main.rs          # Main Tauri application
 │   │   └── lib.rs           # Library code
 │   ├── bin/                 # External executables
-│   │   └── yt-dlp.exe      # yt-dlp downloader
+│   │   └── yt-dlp.exe      # yt-dlp downloader (download separately)
 │   └── Cargo.toml           # Rust dependencies
+├── setup-and-run.ps1        # Easy setup script (PowerShell)
+├── run.bat                  # Easy launch script (Batch)
 └── package.json             # Node dependencies
 ```
 
@@ -190,26 +248,6 @@ npm run check:watch
 2. **Backend Changes**: Edit Rust files in `src-tauri/src/`
 3. **Styling**: Modify SCSS in `src/lib/styles/` or component styles
 4. **New Commands**: Add Tauri commands in `main.rs` and invoke from frontend
-
-## 🐛 Troubleshooting
-
-### Downloads Not Working
-
-- **Check yt-dlp**: Ensure `yt-dlp.exe` is in `src-tauri/bin/`
-- **Update yt-dlp**: Download the latest version from GitHub releases
-- **Check Folder**: Verify the download folder exists and is writable
-- **URL Format**: Try using direct URLs instead of search terms
-
-### Build Errors
-
-- **Clear Cache**: Delete `node_modules` and `build` directories, then reinstall
-- **Rust Errors**: Ensure Rust toolchain is installed (`rustup update`)
-- **Port Conflicts**: If dev server fails, check if port 5173 is in use
-
-### Settings Not Saving
-
-- **First Run**: Complete the first-run setup before using other features
-- **Permissions**: Ensure the app has write permissions to its config directory
 
 ## 📝 License
 

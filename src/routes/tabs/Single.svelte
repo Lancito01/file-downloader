@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
+    import { confirm as confirmDialog } from "@tauri-apps/plugin-dialog";
     import { FORMATS } from "$lib/assets/keys";
     import {
         downloadFromLink,
@@ -209,7 +210,7 @@
         
         try {
             await invoke("open_folder", { 
-                folder_path: pathToOpen
+                folderPath: pathToOpen
             });
             setStatus(`✓ Opened folder for: ${item.link.substring(0, 50)}...`, "success");
         } catch (error) {
@@ -229,13 +230,13 @@
         }
         
         // Show confirmation
-        const confirmed = confirm("Delete the downloaded file(s) from your computer? This cannot be undone.");
+        const confirmed = await confirmDialog("Delete the downloaded file(s) from your computer? This cannot be undone.");
         if (!confirmed) return;
         
         try {
             // Call backend command to delete
             const result = await invoke<string>("delete_download_folder", { 
-                folder_path: pathToDelete
+                folderPath: pathToDelete
             });
             
             // Remove from history

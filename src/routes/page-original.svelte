@@ -23,7 +23,13 @@
     import StatusBar from "./StatusBar.svelte";
 
     // Automatic changing of status color based on detection of status.type
-    $: statusColor = $status?.type ? getStatusColor($status.type) : { bg: "#1a1a1a", text: "white" };
+    let statusColor = $state("white");
+    
+    $effect(() => {
+        if ($status.type) {
+            statusColor = getStatusColor();
+        }
+    });
 
     onMount(async () => {
         // ! Initialization of settings store

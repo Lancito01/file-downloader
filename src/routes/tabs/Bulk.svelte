@@ -7,36 +7,72 @@
         setStatus,
         defaultFormat,
         embedMetadata,
-        type DownloadFormat,
+        defaultAudioExtension,
+        defaultVideoExtension,
+        currentDestination,
+        availableSubfolders,
+        newSubfolderName,
+        refreshSubfolders,
+        createSubfolder,
+        getDownloadPath,
+        downloadProgress,
+        isDownloading,
+        consoleOutput,
     } from "$lib/utils";
-
-    type QueueItem = {
-        link: string;
-        status: "pending" | "downloading" | "success" | "error";
-        message: string;
-        timestamp?: Date;
-    };
+    import type { DownloadFormat, QueueItem } from "$lib/types";
+    import DownloadLocation from "$lib/components/DownloadLocation.svelte";
 
     let linksInput = "";
     let format: DownloadFormat = $defaultFormat;
-    let extension = "";
+    let extension = getDefaultExtension(format);
     let embedExtras = $embedMetadata;
     let running = false;
     let queue: QueueItem[] = [];
     let completed = 0;
     let failed = 0;
 
+    function getDefaultExtension(fmt: DownloadFormat): string {
+        return fmt === FORMATS.AUDIO ? $defaultAudioExtension : $defaultVideoExtension;
+    }
+
+    // Initialize subfolder list when component loads
+    $: if ($selectedDownloadFolder) {
+        refreshSubfolders();
+    }
+
+    // Update extension when format changes (user selection)
+    $: if (!running) {
+        extension = getDefaultExtension(format);
+    }
+
     const unsubFormat = defaultFormat.subscribe((value) => {
-        if (!running) format = value;
+        if (!running) {
+            format = value;
+            extension = getDefaultExtension(value);
+        }
     });
 
     const unsubEmbed = embedMetadata.subscribe((value) => {
         if (!running) embedExtras = value;
     });
 
+    const unsubAudioExt = defaultAudioExtension.subscribe((value) => {
+        if (!running && format === FORMATS.AUDIO) {
+            extension = value;
+        }
+    });
+
+    const unsubVideoExt = defaultVideoExtension.subscribe((value) => {
+        if (!running && format === FORMATS.VIDEO) {
+            extension = value;
+        }
+    });
+
     onDestroy(() => {
         unsubFormat();
         unsubEmbed();
+        unsubAudioExt();
+        unsubVideoExt();
     });
 
     function parseLinks(): string[] {
@@ -50,6 +86,12 @@
         if (!ext.trim()) return true;
         return /^[a-z0-9]+$/i.test(ext.trim());
     }
+
+    // Compute if bulk download is possible (reactive statement)
+    $: canStartBulk = !running && 
+        linksInput.trim() && 
+        $selectedDownloadFolder &&
+        (!extension || validateExtension(extension));
 
     async function startBulkDownload() {
         const links = parseLinks();
@@ -68,6 +110,30 @@
             setStatus("Extension should only contain letters and numbers.", "error");
             return;
         }
+
+        // Determine final destination folder
+        let finalFolder = $selectedDownloadFolder;
+        
+        if ($currentDestination === "browse") {
+            if (!customDestination) {
+                setStatus("Please select a destination folder.", "error");
+                return;
+            }
+            finalFolder = customDestination;
+        } else if ($currentDestination === "new") {
+            if (!$newSubfolderName.trim()) {
+                setStatus("Please enter a folder name.", "error");
+                return;
+            }
+            finalFolder = `${$selectedDownloadFolder}/${$newSubfolderName.trim()}`;
+        } else if ($currentDestination === "subfolder") {
+            if (!selectedSubfolder) {
+                setStatus("Please select a subfolder.", "error");
+                return;
+            }
+            finalFolder = `${$selectedDownloadFolder}/${selectedSubfolder}`;
+        }
+        // If "root", finalFolder stays as $selectedDownloadFolder
 
         running = true;
         completed = 0;
@@ -94,6 +160,7 @@
             try {
                 const result = await downloadFromLink({
                     link: item.link,
+                    folder: finalFolder,
                     format,
                     extension: extension.trim() || undefined,
                     embeds: embedExtras,
@@ -193,17 +260,15 @@
                 <span>Embed artwork & metadata</span>
             </label>
 
-            <div class="destination-info">
-                <span class="destination-label">📁 Destination:</span>
-                <span class="destination-path">{$selectedDownloadFolder || "Not set"}</span>
-            </div>
+            <!-- Download Location -->
+            <DownloadLocation disabled={running} />
 
             <div class="button-group">
                 <button
                     class="start-btn"
                     class:running
                     on:click={startBulkDownload}
-                    disabled={running || !linksInput.trim()}
+                    disabled={!canStartBulk}
                 >
                     {#if running}
                         <span class="spinner"></span>
@@ -290,7 +355,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
-        height: 100%;
+        min-height: 100%;
         width: 100%;
 
         @media (max-width: 900px) {
@@ -414,28 +479,185 @@
         }
     }
 
-    .destination-info {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.8rem;
+    // Destination Selection Styles
+    .destination-section {
+        margin-top: 1rem;
+
+        .label-text {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: $text;
+        }
+    }
+
+    .destination-card {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.5rem;
+        padding: 0.5rem;
+        background: $surface-alt;
+    }
+
+    .destination-option {
+        display: block;
+        margin: 0.25rem 0;
+        padding: 0.5rem;
+        border-radius: 0.4rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        input[type="radio"] {
+            margin-right: 0.5rem;
+        }
+
+        .option-content {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+
+            .option-icon {
+                font-size: 1rem;
+            }
+
+            .option-text {
+                display: flex;
+                flex-direction: column;
+                gap: 0.1rem;
+
+                .option-title {
+                    font-weight: 500;
+                    color: $text;
+                }
+
+                .option-desc {
+                    font-size: 0.8rem;
+                    color: $text-muted;
+                }
+            }
+        }
+    }
+
+    .subfolder-dropdown {
+        margin-left: 2rem;
+        margin-top: 0.5rem;
+
+        .field-select {
+            width: 100%;
+            padding: 0.4rem 0.6rem;
+            background: $bg1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0.4rem;
+            color: $text;
+        }
+    }
+
+    .new-folder-section {
+        margin-left: 2rem;
+        margin-top: 0.5rem;
+
+        .input-group {
+            display: flex;
+            gap: 0.5rem;
+
+            .field-input {
+                flex: 1;
+                padding: 0.4rem 0.6rem;
+                background: $bg1;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0.4rem;
+                color: $text;
+            }
+
+            .create-folder-btn {
+                padding: 0.4rem 0.8rem;
+                background: $accent;
+                color: $bg0;
+                border: none;
+                border-radius: 0.4rem;
+                cursor: pointer;
+                font-size: 0.8rem;
+
+                &:hover:not(:disabled) {
+                    background: lighten($accent, 10%);
+                }
+
+                &:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                }
+            }
+        }
+    }
+
+    .browse-section {
+        margin-left: 2rem;
+        margin-top: 0.5rem;
+
+        .browse-folder-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.8rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.4rem;
+            color: $text;
+            cursor: pointer;
+            transition: background 0.2s ease;
+
+            &:hover:not(:disabled) {
+                background: rgba(255, 255, 255, 0.15);
+            }
+
+            &:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .browse-icon {
+                font-size: 0.9rem;
+            }
+
+            .browse-text {
+                font-size: 0.8rem;
+            }
+        }
+
+        .selected-path {
+            margin-top: 0.3rem;
+            font-size: 0.7rem;
+            color: $text-muted;
+            font-family: $font-mono;
+            padding: 0.2rem 0.4rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.3rem;
+            word-break: break-all;
+        }
+    }
+
+    .destination-preview {
+        margin-top: 0.8rem;
+        padding: 0.6rem;
         background: rgba(254, 198, 0, 0.1);
         border-left: 3px solid $accent;
-        border-radius: 0.5rem;
-        font-size: 0.85rem;
+        border-radius: 0.4rem;
+        font-size: 0.8rem;
 
-        .destination-label {
+        .preview-label {
             color: $text-muted;
             font-weight: 500;
         }
 
-        .destination-path {
+        .preview-path {
             color: $text;
             font-family: $font-mono;
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            display: block;
+            margin-top: 0.2rem;
+            word-break: break-all;
         }
     }
 

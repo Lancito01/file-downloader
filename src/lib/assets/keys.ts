@@ -15,6 +15,14 @@ export const SETTINGS_KEYS = {
         id: "embedMetadata",
         text: "Embed artwork and metadata",
     },
+    DEFAULT_AUDIO_EXTENSION: {
+        id: "defaultAudioExtension",
+        text: "Default Audio Extension",
+    },
+    DEFAULT_VIDEO_EXTENSION: {
+        id: "defaultVideoExtension",
+        text: "Default Video Extension",
+    },
 } as const;
 
 export const FORMATS = {

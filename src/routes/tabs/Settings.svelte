@@ -8,15 +8,27 @@
         selectedDownloadFolder,
         defaultFormat,
         embedMetadata,
+        defaultAudioExtension,
+        defaultVideoExtension,
         updateSettingsWithKey,
     } from "$lib/utils";
 
     let localFormat = $defaultFormat;
     let localEmbed = $embedMetadata;
-    let hasChanges = false;
+    let localAudioExt = $defaultAudioExtension;
+    let localVideoExt = $defaultVideoExtension;
 
     // Track changes
-    $: hasChanges = localFormat !== $defaultFormat || localEmbed !== $embedMetadata;
+    $: hasChanges = localFormat !== $defaultFormat || 
+        localEmbed !== $embedMetadata ||
+        localAudioExt !== $defaultAudioExtension ||
+        localVideoExt !== $defaultVideoExtension;
+    
+    // Update local values when store values change
+    $: localFormat = $defaultFormat;
+    $: localEmbed = $embedMetadata;
+    $: localAudioExt = $defaultAudioExtension;
+    $: localVideoExt = $defaultVideoExtension;
 
     const unsubFormat = defaultFormat.subscribe((value) => {
         if (!hasChanges) localFormat = value;
@@ -26,12 +38,38 @@
         if (!hasChanges) localEmbed = value;
     });
 
+    const unsubAudioExt = defaultAudioExtension.subscribe((value) => {
+        if (!hasChanges) localAudioExt = value;
+    });
+
+    const unsubVideoExt = defaultVideoExtension.subscribe((value) => {
+        if (!hasChanges) localVideoExt = value;
+    });
+
     onDestroy(() => {
         unsubFormat();
         unsubEmbed();
+        unsubAudioExt();
+        unsubVideoExt();
     });
 
+    function validateExtension(ext: string): boolean {
+        if (!ext.trim()) return true; // Optional field
+        return /^[a-z0-9]+$/i.test(ext.trim());
+    }
+
     async function saveAllSettings() {
+        // Validate extensions
+        if (!validateExtension(localAudioExt)) {
+            setStatus("Audio extension should only contain letters and numbers (e.g., mp3, m4a).", "error");
+            return;
+        }
+
+        if (!validateExtension(localVideoExt)) {
+            setStatus("Video extension should only contain letters and numbers (e.g., mp4, mkv).", "error");
+            return;
+        }
+
         let folderSaved = false;
         
         // Save folder if set
@@ -46,6 +84,14 @@
         // Save embed preference
         await updateSettingsWithKey(SETTINGS_KEYS.EMBED_METADATA.id, localEmbed);
         embedMetadata.set(localEmbed);
+
+        // Save audio extension preference
+        await updateSettingsWithKey(SETTINGS_KEYS.DEFAULT_AUDIO_EXTENSION.id, localAudioExt);
+        defaultAudioExtension.set(localAudioExt);
+
+        // Save video extension preference
+        await updateSettingsWithKey(SETTINGS_KEYS.DEFAULT_VIDEO_EXTENSION.id, localVideoExt);
+        defaultVideoExtension.set(localVideoExt);
 
         hasChanges = false;
 
@@ -104,6 +150,28 @@
                     </select>
                 </label>
 
+                <label class="field">
+                    <span class="label-text">Default Audio Extension</span>
+                    <input
+                        type="text"
+                        placeholder="mp3, m4a, wav, etc."
+                        bind:value={localAudioExt}
+                        maxlength="10"
+                    />
+                    <span class="help-text">Leave blank for auto-detection</span>
+                </label>
+
+                <label class="field">
+                    <span class="label-text">Default Video Extension</span>
+                    <input
+                        type="text"
+                        placeholder="mp4, mkv, webm, etc."
+                        bind:value={localVideoExt}
+                        maxlength="10"
+                    />
+                    <span class="help-text">Leave blank for auto-detection</span>
+                </label>
+
                 <label class="checkbox-field">
                     <input type="checkbox" bind:checked={localEmbed} />
                     <span>Embed artwork & metadata by default</span>
@@ -140,6 +208,19 @@
         display: flex;
         flex-direction: column;
         gap: 1.5rem;
+        padding: 1rem;
+        overflow-y: auto;
+        box-sizing: border-box;
+
+        @media (max-width: 768px) {
+            padding: 0.75rem;
+            gap: 1rem;
+        }
+
+        @media (max-width: 480px) {
+            padding: 0.5rem;
+            gap: 0.75rem;
+        }
     }
 
     .settings-header {
@@ -147,20 +228,41 @@
             margin: 0 0 0.25rem 0;
             font-size: 1.6rem;
             color: $text;
+
+            @media (max-width: 768px) {
+                font-size: 1.4rem;
+            }
+
+            @media (max-width: 480px) {
+                font-size: 1.25rem;
+            }
         }
 
         .subtitle {
             margin: 0;
             color: $text-muted;
             font-size: 0.9rem;
+
+            @media (max-width: 480px) {
+                font-size: 0.8rem;
+            }
         }
     }
 
     .settings-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
         gap: 1.5rem;
         flex: 1;
+
+        @media (max-width: 768px) {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        @media (max-width: 480px) {
+            gap: 0.75rem;
+        }
     }
 
     .settings-card {
@@ -171,6 +273,17 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         display: flex;
         flex-direction: column;
+        min-width: 0; // Prevent overflow
+
+        @media (max-width: 768px) {
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+        }
+
+        @media (max-width: 480px) {
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
     }
 
     .card-section {
@@ -238,6 +351,11 @@
         &:active {
             transform: translateY(0);
         }
+
+        @media (max-width: 480px) {
+            padding: 0.7rem 1rem;
+            font-size: 0.9rem;
+        }
     }
 
     .field {
@@ -251,8 +369,13 @@
             color: $text;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+
+            @media (max-width: 480px) {
+                font-size: 0.8rem;
+            }
         }
 
+        input,
         select {
             padding: 0.7rem 0.9rem;
             background: $surface;
@@ -263,10 +386,28 @@
             font-size: 0.95rem;
             cursor: pointer;
             transition: border-color 0.2s ease;
+            width: 100%;
+            box-sizing: border-box;
 
             &:focus {
                 outline: none;
                 border-color: $accent;
+            }
+
+            @media (max-width: 480px) {
+                padding: 0.6rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: $text-muted;
+            font-style: italic;
+            margin-top: -0.2rem;
+
+            @media (max-width: 480px) {
+                font-size: 0.7rem;
             }
         }
     }

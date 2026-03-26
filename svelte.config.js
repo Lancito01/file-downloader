@@ -10,6 +10,10 @@ const config = {
     kit: {
         adapter: adapter(),
     },
+
+    compilerOptions: {
+        runes: false
+    }
 };
 
 export default config;

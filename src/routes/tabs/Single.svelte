@@ -7,35 +7,69 @@
         setStatus,
         defaultFormat,
         embedMetadata,
-        type DownloadFormat,
+        defaultAudioExtension,
+        defaultVideoExtension,
+        currentDestination,
+        availableSubfolders,
+        newSubfolderName,
+        refreshSubfolders,
+        createSubfolder,
+        getDownloadPath,
+        downloadProgress,
+        isDownloading,
+        consoleOutput,
     } from "$lib/utils";
-
-    type HistoryItem = {
-        link: string;
-        status: "success" | "error";
-        message: string;
-        timestamp: Date;
-    };
+    import type { DownloadFormat, HistoryItem } from "$lib/types";
+    import DownloadLocation from "$lib/components/DownloadLocation.svelte";
 
     let link = "";
     let format: DownloadFormat = $defaultFormat;
-    let extension = "";
+    let extension = getDefaultExtension(format);
     let embedExtras = $embedMetadata;
-    let downloading = false;
-    let history: HistoryItem[] = [];
+
+    function getDefaultExtension(fmt: DownloadFormat): string {
+        return fmt === FORMATS.AUDIO ? $defaultAudioExtension : $defaultVideoExtension;
+    }
+
+    // Initialize subfolder list when component loads
+    $: if ($selectedDownloadFolder) {
+        refreshSubfolders();
+    }
+
+    // Update extension when format changes (user selection)
+    $: if (!$isDownloading) {
+        extension = getDefaultExtension(format);
+    }
 
     // Subscribe to default format changes
     const unsubFormat = defaultFormat.subscribe((value) => {
-        if (!downloading) format = value;
+        if (!$isDownloading) {
+            format = value;
+            extension = getDefaultExtension(value);
+        }
     });
 
     const unsubEmbed = embedMetadata.subscribe((value) => {
-        if (!downloading) embedExtras = value;
+        if (!$isDownloading) embedExtras = value;
+    });
+
+    const unsubAudioExt = defaultAudioExtension.subscribe((value) => {
+        if (!$isDownloading && format === FORMATS.AUDIO) {
+            extension = value;
+        }
+    });
+
+    const unsubVideoExt = defaultVideoExtension.subscribe((value) => {
+        if (!$isDownloading && format === FORMATS.VIDEO) {
+            extension = value;
+        }
     });
 
     onDestroy(() => {
         unsubFormat();
         unsubEmbed();
+        unsubAudioExt();
+        unsubVideoExt();
     });
 
     function validateURL(url: string): boolean {
@@ -60,8 +94,14 @@
         return /^[a-z0-9]+$/i.test(ext.trim());
     }
 
+    // Compute if download is possible (reactive statement)
+    $: canDownload = !$isDownloading && 
+        link.trim() && 
+        $selectedDownloadFolder &&
+        (!extension || validateExtension(extension));
+
     async function handleDownload() {
-        if (downloading) return;
+        if ($isDownloading) return;
 
         // Validation
         if (!validateURL(link)) {
@@ -79,12 +119,36 @@
             return;
         }
 
+        // Determine final destination folder
+        let finalFolder = $selectedDownloadFolder;
+        
+        if ($currentDestination === "browse") {
+            if (!customDestination) {
+                setStatus("Please select a destination folder.", "error");
+                return;
+            }
+            finalFolder = customDestination;
+        } else if ($currentDestination === "new") {
+            if (!$newSubfolderName.trim()) {
+                setStatus("Please enter a folder name.", "error");
+                return;
+            }
+            finalFolder = `${$selectedDownloadFolder}/${$newSubfolderName.trim()}`;
+        } else if ($currentDestination === "subfolder") {
+            if (!selectedSubfolder) {
+                setStatus("Please select a subfolder.", "error");
+                return;
+            }
+            finalFolder = `${$selectedDownloadFolder}/${selectedSubfolder}`;
+        }
+        // If "root", finalFolder stays as $selectedDownloadFolder
+
         setStatus("Starting download...", "warning");
-        downloading = true;
 
         try {
             const result = await downloadFromLink({
                 link,
+                folder: finalFolder,
                 format,
                 extension: extension.trim() || undefined,
                 embeds: embedExtras,
@@ -104,6 +168,8 @@
             
             if (result.success) {
                 link = ""; // Clear input on success
+                // Refresh subfolders in case we created a new one
+                await refreshSubfolders();
             }
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
@@ -112,8 +178,6 @@
                 ...history,
             ].slice(0, 10);
             setStatus(message, "error");
-        } finally {
-            downloading = false;
         }
     }
 
@@ -141,7 +205,7 @@
                     type="text"
                     placeholder="https://youtube.com/... or search term"
                     bind:value={link}
-                    disabled={downloading}
+                    disabled={$isDownloading}
                     on:keydown={(e) => e.key === 'Enter' && handleDownload()}
                 />
                 <span class="help-text">Enter a URL or use "ytsearch:song name" for YouTube search</span>
@@ -150,7 +214,7 @@
             <div class="options-grid">
                 <label class="field">
                     <span class="label-text">Format</span>
-                    <select bind:value={format} disabled={downloading}>
+                    <select bind:value={format} disabled={$isDownloading}>
                         <option value={FORMATS.AUDIO}>🎵 Audio</option>
                         <option value={FORMATS.VIDEO}>🎬 Video</option>
                     </select>
@@ -162,7 +226,7 @@
                         type="text"
                         placeholder="mp3, mp4, etc."
                         bind:value={extension}
-                        disabled={downloading}
+                        disabled={$isDownloading}
                         maxlength="10"
                     />
                 </label>
@@ -172,29 +236,65 @@
                 <input
                     type="checkbox"
                     bind:checked={embedExtras}
-                    disabled={downloading}
+                    disabled={$isDownloading}
                 />
                 <span>Embed artwork & metadata</span>
             </label>
 
-            <div class="destination-info">
-                <span class="destination-label">📁 Destination:</span>
-                <span class="destination-path">{$selectedDownloadFolder || "Not set"}</span>
-            </div>
+            <!-- Download Location -->
+            <DownloadLocation disabled={$isDownloading} />
 
             <button
                 class="download-btn"
-                class:downloading
+                class:downloading={$isDownloading}
                 on:click={handleDownload}
-                disabled={downloading || !link.trim()}
+                disabled={!canDownload}
             >
-                {#if downloading}
+                {#if $isDownloading}
                     <span class="spinner"></span>
                     Downloading...
                 {:else}
                     ⬇️ Download Now
                 {/if}
             </button>
+
+            <!-- Progress Display -->
+            {#if $isDownloading}
+                <div class="progress-section">
+                    <div class="progress-header">
+                        <span>Download Progress</span>
+                        <button class="cancel-btn" title="Cancel download">
+                            ❌ Cancel
+                        </button>
+                    </div>
+                    
+                    {#if $downloadProgress.percentage !== undefined}
+                        <div class="progress-bar-container">
+                            <div class="progress-bar">
+                                <div 
+                                    class="progress-fill" 
+                                    style="width: {$downloadProgress.percentage}%"
+                                ></div>
+                            </div>
+                            <span class="progress-text">{$downloadProgress.percentage.toFixed(1)}%</span>
+                        </div>
+                    {/if}
+
+                    {#if $downloadProgress.speed || $downloadProgress.eta}
+                        <div class="progress-stats">
+                            {#if $downloadProgress.speed}
+                                <span class="stat">🚀 {$downloadProgress.speed}</span>
+                            {/if}
+                            {#if $downloadProgress.eta}
+                                <span class="stat">⏱️ {$downloadProgress.eta} remaining</span>
+                            {/if}
+                            {#if $downloadProgress.size}
+                                <span class="stat">📦 {$downloadProgress.size}</span>
+                            {/if}
+                        </div>
+                    {/if}
+                </div>
+            {/if}
         </div>
     </div>
 
@@ -238,7 +338,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 1.5rem;
-        height: 100%;
+        min-height: 100%;
         width: 100%;
 
         @media (max-width: 900px) {
@@ -426,6 +526,81 @@
     @keyframes spin {
         to {
             transform: rotate(360deg);
+        }
+    }
+
+    // Progress Section Styles
+    .progress-section {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.5rem;
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.8rem;
+            font-weight: 500;
+
+            .cancel-btn {
+                padding: 0.3rem 0.6rem;
+                background: rgba(255, 77, 77, 0.2);
+                border: 1px solid #ff4d4d;
+                border-radius: 0.4rem;
+                color: #ff4d4d;
+                font-size: 0.8rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+
+                &:hover {
+                    background: rgba(255, 77, 77, 0.3);
+                }
+            }
+        }
+
+        .progress-bar-container {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 0.6rem;
+
+            .progress-bar {
+                flex: 1;
+                height: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 4px;
+                overflow: hidden;
+
+                .progress-fill {
+                    height: 100%;
+                    background: linear-gradient(90deg, #4dff88, #00ff47);
+                    transition: width 0.3s ease;
+                    border-radius: 4px;
+                }
+            }
+
+            .progress-text {
+                font-size: 0.9rem;
+                font-weight: 500;
+                color: #4dff88;
+                min-width: 50px;
+                text-align: right;
+            }
+        }
+
+        .progress-stats {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.8rem;
+            color: $text-muted;
+
+            .stat {
+                display: flex;
+                align-items: center;
+                gap: 0.3rem;
+            }
         }
     }
 

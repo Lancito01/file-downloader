@@ -11,12 +11,18 @@
         defaultAudioExtension,
         defaultVideoExtension,
         updateSettingsWithKey,
+        dependencyStatus,
+        checkDependenciesOnLaunch,
+        updateYtDlp,
+        installFfmpeg,
     } from "$lib/utils";
 
     let localFormat = $defaultFormat;
     let localEmbed = $embedMetadata;
     let localAudioExt = $defaultAudioExtension;
     let localVideoExt = $defaultVideoExtension;
+    let isCheckingDeps = false;
+    let isUpdatingYtDlp = false;
 
     // Track changes
     $: hasChanges = localFormat !== $defaultFormat || 
@@ -56,6 +62,54 @@
     function validateExtension(ext: string): boolean {
         if (!ext.trim()) return true; // Optional field
         return /^[a-z0-9]+$/i.test(ext.trim());
+    }
+
+    async function handleCheckDeps() {
+        isCheckingDeps = true;
+        try {
+            await checkDependenciesOnLaunch();
+            setStatus("✓ Dependency check complete!", "success");
+        } catch (error) {
+            setStatus("Failed to check dependencies", "error");
+            console.error(error);
+        } finally {
+            isCheckingDeps = false;
+        }
+    }
+
+    async function handleUpdateYtDlp() {
+        isUpdatingYtDlp = true;
+        try {
+            const result = await updateYtDlp();
+            if ("error_code" in result && result.error_code) {
+                setStatus(`Update failed: ${result.message}`, "error");
+            } else {
+                setStatus("✓ yt-dlp updated successfully!", "success");
+                // Re-check dependencies after update
+                await checkDependenciesOnLaunch();
+            }
+        } catch (error) {
+            setStatus("Failed to update yt-dlp", "error");
+            console.error(error);
+        } finally {
+            isUpdatingYtDlp = false;
+        }
+    }
+
+    async function handleInstallFfmpeg() {
+        try {
+            const result = await installFfmpeg();
+            if ("error_code" in result && result.error_code) {
+                setStatus(`FFmpeg install failed: ${result.message}`, "error");
+            } else {
+                setStatus("✓ FFmpeg installed successfully!", "success");
+                // Re-check dependencies after install
+                await checkDependenciesOnLaunch();
+            }
+        } catch (error) {
+            setStatus("Failed to install FFmpeg", "error");
+            console.error(error);
+        }
     }
 
     async function saveAllSettings() {
@@ -116,6 +170,86 @@
     </div>
 
     <div class="settings-grid">
+        <!-- Dependency Status Card -->
+        <div class="settings-card">
+            <div class="card-section">
+                <h4>🔧 Dependencies</h4>
+                <p class="section-description">Manage required tools for downloads</p>
+
+                <div class="deps-status">
+                    {#if $dependencyStatus}
+                        <!-- yt-dlp Status -->
+                        <div class="dep-item">
+                            <span class="dep-label">yt-dlp</span>
+                            <span class="dep-value">
+                                {#if $dependencyStatus.yt_dlp_installed}
+                                    <span class="status-badge status-ready">✓ Ready</span>
+                                    {#if $dependencyStatus.yt_dlp_version}
+                                        <span class="version-text">({$dependencyStatus.yt_dlp_version})</span>
+                                    {/if}
+                                {:else}
+                                    <span class="status-badge status-missing">✗ Missing</span>
+                                {/if}
+                            </span>
+                        </div>
+
+                        <!-- FFmpeg Status -->
+                        <div class="dep-item">
+                            <span class="dep-label">FFmpeg</span>
+                            <span class="dep-value">
+                                {#if $dependencyStatus.ffmpeg_source === "System"}
+                                    <span class="status-badge status-ready">✓ System</span>
+                                {:else if $dependencyStatus.ffmpeg_source === "Bundled"}
+                                    <span class="status-badge status-bundled">✓ Bundled</span>
+                                {:else}
+                                    <span class="status-badge status-missing">✗ Missing</span>
+                                {/if}
+                            </span>
+                        </div>
+                    {:else}
+                        <div class="loading-text">Checking dependencies...</div>
+                    {/if}
+                </div>
+
+                <div class="button-group">
+                    <button 
+                        class="action-btn check-btn"
+                        on:click={handleCheckDeps}
+                        disabled={isCheckingDeps}
+                    >
+                        {#if isCheckingDeps}
+                            ⟳ Checking...
+                        {:else}
+                            ✓ Check Now
+                        {/if}
+                    </button>
+                    
+                    {#if $dependencyStatus?.yt_dlp_installed}
+                        <button 
+                            class="action-btn update-btn"
+                            on:click={handleUpdateYtDlp}
+                            disabled={isUpdatingYtDlp}
+                        >
+                            {#if isUpdatingYtDlp}
+                                ⟳ Updating...
+                            {:else}
+                                ⬆ Update yt-dlp
+                            {/if}
+                        </button>
+                    {/if}
+
+                    {#if $dependencyStatus?.ffmpeg_source === "Missing"}
+                        <button 
+                            class="action-btn install-btn"
+                            on:click={handleInstallFfmpeg}
+                        >
+                            ⬇ Install FFmpeg
+                        </button>
+                    {/if}
+                </div>
+            </div>
+        </div>
+
         <!-- Download Folder Card -->
         <div class="settings-card">
             <div class="card-section">
@@ -541,4 +675,122 @@
             }
         }
     }
+
+    .deps-status {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        padding: 0.9rem;
+        background: $surface;
+        border: 1px solid $border;
+        border-radius: 0.6rem;
+    }
+
+    .dep-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+
+        .dep-label {
+            font-weight: 500;
+            font-size: 0.9rem;
+            color: $text;
+            min-width: 80px;
+        }
+
+        .dep-value {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            justify-content: flex-end;
+
+            .status-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 0.3rem;
+                padding: 0.4rem 0.8rem;
+                border-radius: 0.4rem;
+                font-size: 0.8rem;
+                font-weight: 500;
+                white-space: nowrap;
+
+                &.status-ready {
+                    background: rgba(72, 187, 120, 0.15);
+                    color: #48bb78;
+                }
+
+                &.status-bundled {
+                    background: rgba(237, 137, 54, 0.15);
+                    color: #ed8936;
+                }
+
+                &.status-missing {
+                    background: rgba(245, 101, 101, 0.15);
+                    color: #f56565;
+                }
+            }
+
+            .version-text {
+                font-size: 0.75rem;
+                color: $text-muted;
+                font-weight: normal;
+            }
+        }
+    }
+
+    .loading-text {
+        text-align: center;
+        padding: 0.5rem;
+        color: $text-muted;
+        font-size: 0.9rem;
+    }
+
+    .button-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 0.7rem;
+        margin-top: 0.3rem;
+    }
+
+    .action-btn {
+        padding: 0.6rem 0.8rem;
+        border: 1px solid $border;
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: $text;
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+
+        &:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: $accent;
+            transform: translateY(-1px);
+        }
+
+        &:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        &.check-btn:not(:disabled):hover {
+            border-color: #48bb78;
+            color: #48bb78;
+        }
+
+        &.update-btn:not(:disabled):hover {
+            border-color: #4299e1;
+            color: #4299e1;
+        }
+
+        &.install-btn:not(:disabled):hover {
+            border-color: #9f7aea;
+            color: #9f7aea;
+        }
+    }
+
 </style>

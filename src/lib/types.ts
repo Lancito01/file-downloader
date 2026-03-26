@@ -38,6 +38,7 @@ export type HistoryItem = {
     status: "success" | "error";
     message: string;
     timestamp: Date;
+    folder?: string;
 };
 
 export type QueueItem = {
@@ -73,4 +74,19 @@ export type YtDlpInstallResult = {
 export type FfmpegInstallResult = {
     success: boolean;
     message: string;
+};
+
+export type DependencyStatus = {
+    yt_dlp_installed: boolean;
+    yt_dlp_version: string | null;
+    yt_dlp_outdated: boolean;
+    ffmpeg_source: "System" | "Bundled" | "Missing";
+};
+
+export type DependencySource = "System" | "Bundled" | "Missing";
+
+export type InstallationError = {
+    message: string;
+    error_code?: string;
+    suggested_action?: string;
 };

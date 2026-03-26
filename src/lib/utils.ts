@@ -11,7 +11,9 @@ import type {
     DownloadPayload,
     DownloadResult,
     YtDlpInstallResult,
-    FfmpegInstallResult
+    FfmpegInstallResult,
+    DependencyStatus,
+    InstallationError
 } from "$lib/types";
 
 export let settings: Store | null = null;
@@ -100,10 +102,6 @@ export const initializeEventListeners = async (): Promise<void> => {
     }
 };
 
-export const checkYtDlpInstalled = async (): Promise<boolean> => {
-    return await invoke<boolean>("check_yt_dlp_installed");
-};
-
 export const installYtDlp = async (): Promise<YtDlpInstallResult> => {
     return await invoke<YtDlpInstallResult>("install_yt_dlp");
 };
@@ -114,6 +112,22 @@ export const checkFfmpegInstalled = async (): Promise<boolean> => {
 
 export const installFfmpeg = async (): Promise<FfmpegInstallResult> => {
     return await invoke<FfmpegInstallResult>("install_ffmpeg");
+};
+
+export const checkYtDlpVersion = async (): Promise<[string | null, string | null, boolean]> => {
+    return await invoke<[string | null, string | null, boolean]>("check_yt_dlp_version");
+};
+
+export const getDependencyStatus = async (): Promise<any> => {
+    return await invoke<any>("get_dependency_status");
+};
+
+export const updateYtDlp = async (): Promise<InstallResult> => {
+    return await invoke<InstallResult>("update_yt_dlp");
+};
+
+export const getYtDlpVersion = async (): Promise<[string | null, string | null, boolean]> => {
+    return await checkYtDlpVersion();
 };
 
 export const updateStatus = (newStatus: Status): void => {
@@ -249,6 +263,53 @@ async function getDefaultDownloadPath(): Promise<string | undefined> {
         return undefined;
     }
 }
+
+// Dependency and environment status stores
+export const dependencyStatus = writable<DependencyStatus | null>(null);
+export const isDependenciesReady = writable<boolean>(false);
+
+export const checkDependenciesOnLaunch = async (): Promise<void> => {
+    try {
+        const status = await getDependencyStatus();
+        dependencyStatus.set(status);
+        
+        // Downloads can proceed only if yt-dlp is installed
+        const ready = status.yt_dlp_installed;
+        isDependenciesReady.set(ready);
+        
+        if (!ready) {
+            setStatus("yt-dlp is required to download. Please install it in Settings.", "error");
+        } else if (status.yt_dlp_version) {
+            // Show version info in console for debugging
+            console.log(`✓ yt-dlp is ready (version: ${status.yt_dlp_version})`);
+            
+            // Check ffmpeg status
+            if (status.ffmpeg_source === "System") {
+                console.log("✓ FFmpeg found on system PATH");
+            } else if (status.ffmpeg_source === "Bundled") {
+                console.log("✓ Using bundled FFmpeg");
+            } else {
+                console.warn("⚠ FFmpeg not found - downloads requiring video merging will fail");
+                setStatus("⚠ FFmpeg not found. Audio-only downloads should work, but video downloads may fail.", "warning");
+            }
+        }
+    } catch (error) {
+        console.error("Failed to check dependencies:", error);
+        setStatus("Failed to check dependencies. Some features may not work.", "warning");
+    }
+};
+
+export const installYtDlpElevated = async (): Promise<InstallResult> => {
+    return await invoke<InstallResult>("install_yt_dlp_elevated");
+};
+
+export const checkYtDlpInstalled = async (): Promise<boolean> => {
+    return await invoke<boolean>("check_yt_dlp_installed");
+};
+
+export const debugGetFfmpegPath = async (): Promise<string> => {
+    return await invoke<string>("get_ffmpeg_path");
+};
 
 //* Always synchronizes `lastActiveTab` with the settings store.
 export const activeTab = writable<string>("single");

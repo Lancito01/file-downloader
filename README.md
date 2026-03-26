@@ -20,8 +20,8 @@ run.bat
 
 These scripts will:
 - ✅ Check and configure your environment
-- ✅ Prompt to install yt-dlp if missing
-- ✅ Prompt to install ffmpeg/ffprobe if missing
+- ✅ Auto-install yt-dlp on first run if missing
+- ✅ Provide ffmpeg (bundled or system-installed)
 - ✅ Load Visual Studio environment if installed
 - ✅ Launch the app
 
@@ -36,28 +36,51 @@ If the scripts don't work or you prefer manual setup:
      - During installation, select "Desktop development with C++"
      - Include Windows 10/11 SDK
 
-2. **Install yt-dlp (system command):**
-    - Verify: `yt-dlp --version`
-    - If missing, install via your package manager:
-      - macOS: `brew install yt-dlp`
-      - Windows: `winget install -e --id yt-dlp.yt-dlp`
-      - Cross-platform: `python -m pip install -U --user yt-dlp`
+2. **Install yt-dlp (recommended - automatically checked on first run):**
+   - If you prefer to pre-install: `python -m pip install -U --user yt-dlp`
+   - Or use package manager: `brew install yt-dlp` (macOS) or `winget install -e --id yt-dlp.yt-dlp` (Windows)
+   - The app will prompt you to install if missing
 
-3. **Install ffmpeg/ffprobe (system commands):**
-   - Verify: `ffmpeg -version` and `ffprobe -version`
-   - If missing, install via your package manager:
-     - macOS: `brew install ffmpeg`
-     - Windows: `winget install -e --id Gyan.FFmpeg`
+3. **Optional: Pre-install ffmpeg (app can use bundled version):**
+   - macOS: `brew install ffmpeg`
+   - Windows: `winget install -e --id Gyan.FFmpeg` or `Gyan.FFmpeg`
+   - Linux: `sudo apt-get install ffmpeg`
 
-4. **Install Dependencies:**
-    ```bash
-    npm install
-    ```
+4. **Install Node Dependencies:**
+   ```bash
+   npm install
+   ```
 
 5. **Launch:**
-    ```bash
-    npm run tauri dev
-    ```
+   ```bash
+   npm run tauri dev
+   ```
+
+## 📦 How Dependencies Work
+
+### yt-dlp (Required for downloads)
+- **Strategy:** Always uses system-installed version from PATH
+- **Why:** yt-dlp frequently updates and needs fresh versions for new sites
+- **First Run:** App checks if yt-dlp is installed. If missing, prompts for auto-install via:
+  - User-scope options first (no admin needed): `pipx`, `pip --user`
+  - System installers if needed: `brew` (macOS), `winget` (Windows)
+- **Updates:** On every launch, app checks if your yt-dlp is outdated and prompts to update
+- **Manual Update:** `python -m pip install -U --user yt-dlp` or use your package manager
+
+### ffmpeg (Required for video processing)
+- **Strategy:** Try system-installed version first, fall back to bundled binaries
+- **Why:** More stable than yt-dlp, infrequent updates
+- **System ffmpeg:** If you have ffmpeg/ffprobe on PATH, the app will use it
+- **Bundled ffmpeg:** If system version is missing, bundled version (included with app) is used
+- **Manual Update:** Update via your package manager or download from https://ffmpeg.org
+
+## 🔒 Download Blocking & Safety
+
+The app enforces a strict policy:
+- ✅ Downloads **only work** if yt-dlp is installed and ready
+- 🔒 Download buttons are **disabled** and greyed out if dependencies are missing
+- 📢 Clear warnings tell you what's needed and how to fix it
+- 🎯 On first run, you're guided through dependency setup
 
 ## ⚠️ Troubleshooting
 
@@ -87,23 +110,78 @@ If the scripts don't work or you prefer manual setup:
 2. Restart your terminal
 3. Verify: `cargo --version`
 
-### "yt-dlp not found" or Downloads Failing
+### "Download buttons are disabled" or "Install Dependencies First"
 
-**Cause:** yt-dlp is not installed or not available on PATH.
+**Cause:** yt-dlp is not installed.
 
 **Solution:**
-1. Run `yt-dlp --version` to verify it's available.
-2. If missing, install with `brew`, `winget`, or `python -m pip install -U --user yt-dlp`.
-3. Restart your terminal and relaunch the app.
+1. Look for an "Install yt-dlp" option in the Settings tab
+2. Click "Auto-Install" and follow prompts
+3. If auto-install fails:
+   - Install Python from https://python.org
+   - Then run: `python -m pip install -U --user yt-dlp`
+   - Restart the app
+4. If you prefer system install: `brew install yt-dlp` (macOS) or `winget install -e --id yt-dlp.yt-dlp` (Windows)
+5. Verify: `yt-dlp --version` in terminal
+
+### "yt-dlp is outdated" (Alert on launch)
+
+**Solution:**
+- Click "Update now" in the alert to auto-update
+- Or manually update: `python -m pip install -U --user yt-dlp`
+- Or use your package manager: `brew upgrade yt-dlp` (macOS)
 
 ### "ffmpeg/ffprobe not found" or Merging Fails
 
-**Cause:** ffmpeg/ffprobe are not installed or not available on PATH.
+**Cause:** ffmpeg is not available (system or bundled version missing).
+
+**What's happening:**
+- The app checks for ffmpeg in your system PATH first (using `where ffmpeg` on Windows or `which ffmpeg` on macOS)
+- If not found on PATH, it falls back to bundled ffmpeg in the app installation directory
+- If neither is found, downloads that need video merging will fail
 
 **Solution:**
-1. Run `ffmpeg -version` and `ffprobe -version` to verify they're available.
-2. If missing, install with `brew install ffmpeg` or `winget install -e --id Gyan.FFmpeg`.
-3. Restart your terminal and relaunch the app.
+
+1. **Verify ffmpeg is on your PATH:**
+   - Windows: Open Command Prompt and type `where ffmpeg` - if it shows a path, ffmpeg is found
+   - macOS: Open Terminal and type `which ffmpeg` - if it shows a path, ffmpeg is found
+   
+2. **If ffmpeg is NOT found on PATH, install it:**
+   - **Windows:** 
+     - Option A (Recommended): `winget install -e --id Gyan.FFmpeg`
+     - Option B: Download from https://ffmpeg.org/download.html and add to PATH
+   - **macOS:**
+     - Option A (Recommended): `brew install ffmpeg`
+     - Option B: Download from https://evermeet.cx/ffmpeg/
+   
+3. **After installing, restart the app** and try downloading again
+
+4. **Still not working?**
+   - Make sure you restarted the Command Prompt/Terminal after installing ffmpeg
+   - On Windows, verify PATH by typing `echo %PATH%` in Command Prompt - you should see ffmpeg's directory
+   - On macOS, verify PATH by typing `echo $PATH` in Terminal
+
+**Technical Note:** The app prefers system ffmpeg over bundled ffmpeg. If you have ffmpeg installed but it's still not being found, the PATH may not be updated. Restart your terminal/command prompt to refresh PATH.
+
+
+### Auto-Install Failed (Installation Error)
+
+**When it happens:**
+- First-time setup on fresh Windows/macOS
+- No Python or package manager installed
+- Missing admin permissions
+
+**Solution:**
+1. **Install Python** (if you don't have it):
+   - https://www.python.org/downloads/
+   - Make sure to check "Add Python to PATH" during installation
+   
+2. **Restart the app** and try again
+
+3. **Manual installation** (fallback):
+   - Windows: `winget install -e --id yt-dlp.yt-dlp --accept-source-agreements --accept-package-agreements`
+   - macOS: `brew install yt-dlp`
+   - Linux: `python3 -m pip install -U --user yt-dlp`
 
 ### First Compilation Takes Forever
 

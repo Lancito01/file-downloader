@@ -11,6 +11,8 @@
         installYtDlp,
         checkFfmpegInstalled,
         installFfmpeg,
+        checkDependenciesOnLaunch,
+        isDependenciesReady,
     } from "$lib/utils.ts";
     import {
         selectedDownloadFolder,
@@ -123,6 +125,9 @@
             type: "info",
             message: "Idle 🌙",
         });
+
+        // Check dependencies on launch
+        await checkDependenciesOnLaunch();
 
         await ensureYtDlpInstalled();
         await ensureFfmpegInstalled();

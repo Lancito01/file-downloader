@@ -18,6 +18,7 @@
         downloadProgress,
         isDownloading,
         consoleOutput,
+        isDependenciesReady,
     } from "$lib/utils";
     import type { DownloadFormat, QueueItem } from "$lib/types";
     import DownloadLocation from "$lib/components/DownloadLocation.svelte";
@@ -93,7 +94,8 @@
     $: canStartBulk = !running && 
         linksInput.trim() && 
         $selectedDownloadFolder &&
-        (!extension || validateExtension(extension));
+        (!extension || validateExtension(extension)) &&
+        $isDependenciesReady;
 
     async function startBulkDownload() {
         const links = parseLinks();
@@ -275,10 +277,13 @@
                     class:running
                     on:click={startBulkDownload}
                     disabled={!canStartBulk}
+                    title={!$isDependenciesReady ? "Install yt-dlp in Settings before downloading" : ""}
                 >
                     {#if running}
                         <span class="spinner"></span>
                         Processing...
+                    {:else if !$isDependenciesReady}
+                        🔒 Install Dependencies First
                     {:else}
                         ▶️ Start Bulk Download
                     {/if}

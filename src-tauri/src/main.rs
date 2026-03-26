@@ -2,6 +2,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::Emitter;
+use tauri::Manager;
+
+#[derive(serde::Serialize, Clone)]
+struct DependencyStatus {
+    yt_dlp_installed: bool,
+    yt_dlp_version: Option<String>,
+    yt_dlp_outdated: bool,
+    ffmpeg_source: String,
+}
 
 fn main() {
     tauri::Builder::default()
@@ -15,11 +24,18 @@ fn main() {
             download_from_link,
             check_yt_dlp_installed,
             install_yt_dlp,
+            install_yt_dlp_elevated,
             check_ffmpeg_installed,
-            install_ffmpeg
+            install_ffmpeg,
+            check_yt_dlp_version,
+            get_dependency_status,
+            update_yt_dlp,
+            get_ffmpeg_path,
+            open_folder,
+            delete_download_folder
         ])
         // ✅ Setup logic
-        .setup(|app| {
+        .setup(|_app| {
             println!("Tauri app is starting...");
             Ok(())
         })
@@ -114,6 +130,9 @@ async fn download_from_link(
         return Err(error_msg);
     }
 
+    // Get ffmpeg path (system or bundled)
+    let ffmpeg_dir = get_ffmpeg_path(app_handle.clone());
+    
     // Build command arguments based on format
     let mut args: Vec<String> = vec![
         "--newline".to_string(),
@@ -121,6 +140,12 @@ async fn download_from_link(
         "--progress-template".to_string(),
         "download:%(progress.percentage)s|%(progress.speed)s|%(progress.eta)s|%(progress.total_bytes)s".to_string(),
     ];
+    
+    // Only add ffmpeg location if we found it
+    if !ffmpeg_dir.is_empty() {
+        args.push("--ffmpeg-location".to_string());
+        args.push(ffmpeg_dir);
+    }
 
     // Add format-specific arguments
     if let Some(ext) = extension {
@@ -278,6 +303,8 @@ fn command_available(command: &str, args: &[&str]) -> bool {
 struct InstallResult {
     success: bool,
     message: String,
+    error_code: Option<String>,
+    suggested_action: Option<String>,
 }
 
 #[tauri::command]
@@ -287,11 +314,20 @@ fn check_yt_dlp_installed() -> bool {
 
 #[tauri::command]
 fn install_yt_dlp() -> Result<InstallResult, String> {
-    let message = run_install_command()?;
-    Ok(InstallResult {
-        success: true,
-        message,
-    })
+    match run_install_command() {
+        Ok(message) => Ok(InstallResult {
+            success: true,
+            message,
+            error_code: None,
+            suggested_action: None,
+        }),
+        Err(e) => Ok(InstallResult {
+            success: false,
+            message: e.clone(),
+            error_code: Some("install_failed".to_string()),
+            suggested_action: Some("Install Python from python.org or use a supported package manager (winget, brew, pipx).".to_string()),
+        }),
+    }
 }
 
 #[tauri::command]
@@ -301,27 +337,46 @@ fn check_ffmpeg_installed() -> bool {
 
 #[tauri::command]
 fn install_ffmpeg() -> Result<InstallResult, String> {
-    let message = run_install_ffmpeg()?;
-    Ok(InstallResult {
-        success: true,
-        message,
-    })
+    match run_install_ffmpeg() {
+        Ok(message) => Ok(InstallResult {
+            success: true,
+            message,
+            error_code: None,
+            suggested_action: None,
+        }),
+        Err(e) => Ok(InstallResult {
+            success: false,
+            message: e.clone(),
+            error_code: Some("install_failed".to_string()),
+            suggested_action: Some("Install ffmpeg manually from https://ffmpeg.org or use your package manager (brew, winget).".to_string()),
+        }),
+    }
 }
 
 fn run_install_command() -> Result<String, String> {
     let mut attempts: Vec<(&str, Vec<&str>)> = Vec::new();
 
     if cfg!(target_os = "macos") {
-        if command_available("brew", &["--version"]) {
-            attempts.push(("brew", vec!["install", "yt-dlp"]));
-        }
+        // Try user-scope installers first (no admin needed)
         if command_available("pipx", &["--version"]) {
             attempts.push(("pipx", vec!["install", "yt-dlp"]));
         }
         if command_available("python3", &["--version"]) {
             attempts.push(("python3", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
         }
+        // System installers (may require elevation)
+        if command_available("brew", &["--version"]) {
+            attempts.push(("brew", vec!["install", "yt-dlp"]));
+        }
     } else if cfg!(target_os = "windows") {
+        // Try user-scope installers first (no admin needed)
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["install", "yt-dlp"]));
+        }
+        if command_available("python", &["--version"]) {
+            attempts.push(("python", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
+        }
+        // System installers (may require elevation)
         if command_available("winget", &["--version"]) {
             attempts.push((
                 "winget",
@@ -335,13 +390,8 @@ fn run_install_command() -> Result<String, String> {
                 ],
             ));
         }
-        if command_available("pipx", &["--version"]) {
-            attempts.push(("pipx", vec!["install", "yt-dlp"]));
-        }
-        if command_available("python", &["--version"]) {
-            attempts.push(("python", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
-        }
     } else {
+        // Linux: Try user-scope installers first
         if command_available("pipx", &["--version"]) {
             attempts.push(("pipx", vec!["install", "yt-dlp"]));
         }
@@ -351,7 +401,7 @@ fn run_install_command() -> Result<String, String> {
     }
 
     if attempts.is_empty() {
-        return Err("No supported installer found. Please install yt-dlp manually from https://github.com/yt-dlp/yt-dlp".to_string());
+        return Err("No supported installer found. Please install Python (python.org) or pipx, then try again.".to_string());
     }
 
     let mut last_error = String::from("Unknown error");
@@ -360,7 +410,7 @@ fn run_install_command() -> Result<String, String> {
         match output {
             Ok(output) if output.status.success() => {
                 if command_available("yt-dlp", &["--version"]) {
-                    return Ok(format!("yt-dlp installed using {}.", command));
+                    return Ok(format!("yt-dlp installed successfully using {}.", command));
                 }
                 return Err(format!(
                     "{} completed, but yt-dlp is still not on PATH. Please restart your terminal and try again.",
@@ -487,4 +537,317 @@ fn parse_progress_line(line: &str) -> Option<DownloadProgressEvent> {
     }
     
     None
+}
+
+#[tauri::command]
+fn check_yt_dlp_version() -> Result<(Option<String>, Option<String>, bool), String> {
+    let output = StdCommand::new("yt-dlp")
+        .arg("--version")
+        .output();
+    
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                Ok((Some(version), None, false))
+            } else {
+                Err("yt-dlp version check failed".to_string())
+            }
+        }
+        Err(e) => Err(format!("Failed to run yt-dlp version: {}", e)),
+    }
+}
+
+#[tauri::command]
+fn get_ffmpeg_path(app_handle: AppHandle) -> String {
+    // Try to find ffmpeg on PATH and get full path
+    if cfg!(target_os = "windows") {
+        if let Ok(output) = StdCommand::new("cmd")
+            .args(&["/C", "where ffmpeg"])
+            .output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    // Extract directory from full path
+                    if let Some(dir) = std::path::Path::new(&path).parent() {
+                        let dir_str = dir.display().to_string();
+                        println!("✓ Found ffmpeg on PATH: {}", path);
+                        println!("  Returning directory: {}", dir_str);
+                        return dir_str;
+                    }
+                }
+            } else {
+                println!("✗ FFmpeg not found on PATH (where ffmpeg failed)");
+            }
+        }
+    } else {
+        // macOS and Linux: use `which` command
+        if let Ok(output) = StdCommand::new("which")
+            .arg("ffmpeg")
+            .output() {
+            if output.status.success() {
+                let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path.is_empty() {
+                    if let Some(dir) = std::path::Path::new(&path).parent() {
+                        let dir_str = dir.display().to_string();
+                        println!("✓ Found ffmpeg on PATH: {}", path);
+                        println!("  Returning directory: {}", dir_str);
+                        return dir_str;
+                    }
+                }
+            } else {
+                println!("✗ FFmpeg not found on PATH (which ffmpeg failed)");
+            }
+        }
+    }
+    
+    // Fallback: check bundled ffmpeg
+    let resource_path: Option<String> = app_handle
+        .path()
+        .resource_dir()
+        .ok()
+        .and_then(|p| Some(p.display().to_string()));
+    
+    if let Some(base) = resource_path {
+        let ffmpeg_dir = if cfg!(target_os = "windows") {
+            format!("{}\\bin\\windows", base)
+        } else if cfg!(target_os = "macos") {
+            format!("{}/bin/macos", base)
+        } else {
+            // Linux: return common system directories
+            if std::path::Path::new("/usr/bin/ffmpeg").exists() {
+                return "/usr/bin".to_string();
+            }
+            if std::path::Path::new("/usr/local/bin/ffmpeg").exists() {
+                return "/usr/local/bin".to_string();
+            }
+            return String::new();
+        };
+        
+        let ffmpeg_exe_path = if cfg!(target_os = "windows") {
+            format!("{}\\ffmpeg.exe", ffmpeg_dir)
+        } else {
+            format!("{}/ffmpeg", ffmpeg_dir)
+        };
+        
+        if std::path::Path::new(&ffmpeg_exe_path).exists() {
+            println!("✓ Found bundled ffmpeg: {}", ffmpeg_exe_path);
+            println!("  Returning directory: {}", ffmpeg_dir);
+            return ffmpeg_dir;
+        } else {
+            println!("✗ Bundled ffmpeg not found at: {}", ffmpeg_exe_path);
+        }
+    } else {
+        println!("✗ Could not get resource directory from app_handle");
+    }
+    
+    println!("✗ FFmpeg not found anywhere (PATH or bundled). Downloads requiring video merging will fail.");
+    String::new()
+}
+
+#[tauri::command]
+fn get_dependency_status(app_handle: AppHandle) -> DependencyStatus {
+    let yt_dlp_installed = command_available("yt-dlp", &["--version"]);
+    
+    let yt_dlp_version = if yt_dlp_installed {
+        StdCommand::new("yt-dlp")
+            .arg("--version")
+            .output()
+            .ok()
+            .and_then(|o| {
+                if o.status.success() {
+                    Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+                } else {
+                    None
+                }
+            })
+    } else {
+        None
+    };
+    
+    let ffmpeg_source = if command_available("ffmpeg", &["-version"]) {
+        "System".to_string()
+    } else if let Some(base) = app_handle.path().resource_dir().ok() {
+        let ffmpeg_path = if cfg!(target_os = "windows") {
+            base.join("bin\\windows\\ffmpeg.exe")
+        } else if cfg!(target_os = "macos") {
+            base.join("bin/macos/ffmpeg")
+        } else {
+            std::path::PathBuf::from("")
+        };
+        
+        if ffmpeg_path.exists() {
+            "Bundled".to_string()
+        } else {
+            "Missing".to_string()
+        }
+    } else {
+        "Missing".to_string()
+    };
+    
+    DependencyStatus {
+        yt_dlp_installed,
+        yt_dlp_version,
+        yt_dlp_outdated: false,
+        ffmpeg_source,
+    }
+}
+
+#[tauri::command]
+fn update_yt_dlp() -> Result<InstallResult, String> {
+    let mut attempts: Vec<(&str, Vec<&str>)> = Vec::new();
+    
+    if cfg!(target_os = "macos") {
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["upgrade", "yt-dlp"]));
+        }
+        if command_available("brew", &["--version"]) {
+            attempts.push(("brew", vec!["upgrade", "yt-dlp"]));
+        }
+    } else if cfg!(target_os = "windows") {
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["upgrade", "yt-dlp"]));
+        }
+        if command_available("python", &["--version"]) {
+            attempts.push(("python", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
+        }
+    } else {
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["upgrade", "yt-dlp"]));
+        }
+        if command_available("python3", &["--version"]) {
+            attempts.push(("python3", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
+        }
+    }
+    
+    for (command, args) in attempts {
+        let output = StdCommand::new(command).args(&args).output();
+        match output {
+            Ok(output) if output.status.success() => {
+                return Ok(InstallResult {
+                    success: true,
+                    message: format!("yt-dlp updated successfully using {}.", command),
+                    error_code: None,
+                    suggested_action: None,
+                });
+            }
+            _ => continue,
+        }
+    }
+    
+    Err("Failed to update yt-dlp. Please update manually.".to_string())
+}
+
+#[tauri::command]
+fn install_yt_dlp_elevated() -> Result<InstallResult, String> {
+    if cfg!(target_os = "windows") {
+        if command_available("winget", &["--version"]) {
+            let output = StdCommand::new("powershell")
+                .args(&["-Command", "Start-Process powershell -Verb RunAs -ArgumentList 'winget install -e --id yt-dlp.yt-dlp --accept-source-agreements --accept-package-agreements'"])
+                .output();
+            
+            match output {
+                Ok(output) if output.status.success() => {
+                    return Ok(InstallResult {
+                        success: true,
+                        message: "Elevated installation started. Please complete the installation in the new window.".to_string(),
+                        error_code: None,
+                        suggested_action: None,
+                    });
+                }
+                _ => {}
+            }
+        }
+    } else if cfg!(target_os = "macos") {
+        return Ok(InstallResult {
+            success: false,
+            message: "macOS does not require elevated permissions. Try the standard install.".to_string(),
+            error_code: Some("not_needed".to_string()),
+            suggested_action: Some("Run: brew install yt-dlp".to_string()),
+        });
+    }
+    
+    Err("Elevated installation not supported on this system.".to_string())
+}
+
+#[tauri::command]
+fn open_folder(folder_path: &str) -> Result<String, String> {
+    use std::path::Path;
+    
+    let path = Path::new(folder_path);
+    
+    // Check if path exists
+    if !path.exists() {
+        return Err("The folder no longer exists.".to_string());
+    }
+    
+    // Platform-specific folder opening
+    if cfg!(target_os = "windows") {
+        match StdCommand::new("explorer")
+            .args(&[folder_path])
+            .output() {
+            Ok(_) => {
+                println!("✓ Opened folder: {}", folder_path);
+                Ok("Opening folder...".to_string())
+            }
+            Err(e) => Err(format!("Failed to open folder: {}", e)),
+        }
+    } else if cfg!(target_os = "macos") {
+        match StdCommand::new("open")
+            .args(&[folder_path])
+            .output() {
+            Ok(_) => {
+                println!("✓ Opened folder: {}", folder_path);
+                Ok("Opening folder...".to_string())
+            }
+            Err(e) => Err(format!("Failed to open folder: {}", e)),
+        }
+    } else {
+        // Linux - try xdg-open
+        match StdCommand::new("xdg-open")
+            .args(&[folder_path])
+            .output() {
+            Ok(_) => {
+                println!("✓ Opened folder: {}", folder_path);
+                Ok("Opening folder...".to_string())
+            }
+            Err(e) => Err(format!("Failed to open folder: {}", e)),
+        }
+    }
+}
+
+#[tauri::command]
+fn delete_download_folder(folder_path: &str) -> Result<String, String> {
+    use std::path::Path;
+    use std::fs;
+    
+    let path = Path::new(folder_path);
+    
+    // Check if path exists
+    if !path.exists() {
+        return Err("The folder or file no longer exists.".to_string());
+    }
+    
+    // Delete file or folder recursively
+    if path.is_dir() {
+        match fs::remove_dir_all(path) {
+            Ok(_) => {
+                println!("✓ Deleted folder: {}", folder_path);
+                Ok(format!("Folder deleted successfully."))
+            }
+            Err(e) => {
+                Err(format!("Failed to delete folder: {}", e))
+            }
+        }
+    } else {
+        match fs::remove_file(path) {
+            Ok(_) => {
+                println!("✓ Deleted file: {}", folder_path);
+                Ok(format!("File deleted successfully."))
+            }
+            Err(e) => {
+                Err(format!("Failed to delete file: {}", e))
+            }
+        }
+    }
 }

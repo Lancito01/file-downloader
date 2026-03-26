@@ -1,5 +1,6 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
+    import { invoke } from "@tauri-apps/api/core";
     import { FORMATS } from "$lib/assets/keys";
     import {
         downloadFromLink,
@@ -18,6 +19,7 @@
         downloadProgress,
         isDownloading,
         consoleOutput,
+        isDependenciesReady,
     } from "$lib/utils";
     import type { DownloadFormat, HistoryItem } from "$lib/types";
     import DownloadLocation from "$lib/components/DownloadLocation.svelte";
@@ -102,7 +104,8 @@
     $: canDownload = !$isDownloading && 
         link.trim().length > 0 &&
         Boolean($selectedDownloadFolder) &&
-        (!extension || validateExtension(extension));
+        (!extension || validateExtension(extension)) &&
+        $isDependenciesReady;
 
     async function handleDownload() {
         if ($isDownloading) return;
@@ -164,6 +167,7 @@
                     status: (result.success ? "success" : "error") as "success" | "error",
                     message: result.message,
                     timestamp: new Date(),
+                    folder: finalFolder,
                 },
                 ...history,
             ].slice(0, 10); // Keep last 10
@@ -178,7 +182,7 @@
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             history = [
-                { link, status: "error" as const, message, timestamp: new Date() },
+                { link, status: "error" as const, message, timestamp: new Date(), folder: finalFolder },
                 ...history,
             ].slice(0, 10);
             setStatus(message, "error");
@@ -192,6 +196,48 @@
     function clearHistory() {
         history = [];
         setStatus("History cleared.", "info");
+    }
+
+    async function openFolderLocation(item: HistoryItem) {
+        if (!item.folder) {
+            setStatus("Folder path not available.", "warning");
+            return;
+        }
+        
+        try {
+            await invoke("open_folder", { 
+                folder_path: item.folder 
+            });
+            setStatus("Opening folder...", "info");
+        } catch (error) {
+            console.error("Failed to open folder:", error);
+            setStatus("Could not open folder.", "error");
+        }
+    }
+
+    async function deleteDownloadFile(item: HistoryItem) {
+        if (!item.folder) {
+            setStatus("Folder path not available.", "warning");
+            return;
+        }
+        
+        // Show confirmation
+        const confirmed = confirm("Delete the downloaded file(s) from your computer? This cannot be undone.");
+        if (!confirmed) return;
+        
+        try {
+            // Call backend command to delete
+            const result = await invoke("delete_download_folder", { 
+                folder_path: item.folder 
+            });
+            
+            // Remove from history
+            history = history.filter(h => h !== item);
+            setStatus("✓ Download deleted successfully.", "success");
+        } catch (error) {
+            console.error("Failed to delete:", error);
+            setStatus("Could not delete. The file may have already been moved or deleted.", "error");
+        }
     }
 </script>
 
@@ -212,7 +258,7 @@
                     disabled={$isDownloading}
                     on:keydown={(e) => e.key === 'Enter' && handleDownload()}
                 />
-                <span class="help-text">Enter a URL or use "ytsearch:song name" for YouTube search</span>
+                <span class="help-text">Enter a URL or use "ytsearch:song name" for YouTube search or "scsearch:song name" for SoundCloud search</span>
             </label>
 
             <div class="options-grid">
@@ -257,10 +303,13 @@
                 class:downloading={$isDownloading}
                 on:click={handleDownload}
                 disabled={!canDownload}
+                title={!$isDependenciesReady ? "Install yt-dlp in Settings before downloading" : ""}
             >
                 {#if $isDownloading}
                     <span class="spinner"></span>
                     Downloading...
+                {:else if !$isDependenciesReady}
+                    🔒 Install Dependencies First
                 {:else}
                     ⬇️ Download Now
                 {/if}
@@ -332,6 +381,24 @@
                             <p class="history-message">{item.message}</p>
                             <span class="history-time">{formatTime(item.timestamp)}</span>
                         </div>
+                        {#if item.status === 'success' && item.folder}
+                            <div class="history-actions">
+                                <button 
+                                    class="action-btn folder-btn"
+                                    on:click={() => openFolderLocation(item)}
+                                    title="Open folder location"
+                                >
+                                    📁
+                                </button>
+                                <button 
+                                    class="action-btn delete-btn"
+                                    on:click={() => deleteDownloadFile(item)}
+                                    title="Delete downloaded file"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        {/if}
                     </div>
                 {/each}
             {/if}
@@ -749,6 +816,49 @@
             color: rgba(255, 255, 255, 0.4);
             text-transform: uppercase;
             letter-spacing: 0.05em;
+        }
+    }
+
+    .history-actions {
+        display: flex;
+        gap: 0.4rem;
+        flex-shrink: 0;
+    }
+
+    .action-btn {
+        width: 2rem;
+        height: 2rem;
+        min-width: 2rem;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.05);
+        color: $text;
+        font-size: 0.95rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        &:active {
+            transform: scale(0.95);
+        }
+
+        &.folder-btn:hover {
+            background: rgba(100, 150, 255, 0.15);
+            border-color: rgba(100, 150, 255, 0.3);
+        }
+
+        &.delete-btn:hover {
+            background: rgba(255, 100, 100, 0.15);
+            border-color: rgba(255, 100, 100, 0.3);
         }
     }
 </style>

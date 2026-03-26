@@ -87,6 +87,7 @@ use tokio::process::Command;
 struct DownloadResult {
     success: bool,
     message: String,
+    file_path: Option<String>,
 }
 
 #[derive(serde::Serialize, Clone)]
@@ -107,6 +108,7 @@ struct DownloadProgressEvent {
 struct DownloadCompleteEvent {
     success: bool,
     message: String,
+    file_path: Option<String>,
 }
 
 #[tauri::command]
@@ -126,6 +128,7 @@ async fn download_from_link(
         let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
             success: false,
             message: error_msg.clone(),
+            file_path: None,
         });
         return Err(error_msg);
     }
@@ -183,6 +186,12 @@ async fn download_from_link(
 
             let app_handle_stdout = app_handle.clone();
             let app_handle_stderr = app_handle.clone();
+            let folder_path = folder.to_string();
+            
+            // Use Arc<Mutex<>> to share the downloaded file path between tasks
+            use std::sync::{Arc, Mutex};
+            let downloaded_file = Arc::new(Mutex::new(None::<String>));
+            let downloaded_file_clone = downloaded_file.clone();
 
             // Spawn tasks to read stdout and stderr concurrently
             let stdout_task = tokio::spawn(async move {
@@ -197,6 +206,34 @@ async fn download_from_link(
                     // Parse progress information
                     if let Some(progress) = parse_progress_line(&line) {
                         let _ = app_handle_stdout.emit("download-progress", progress);
+                    }
+                    
+                    // Capture downloaded file path
+                    // yt-dlp outputs: "[download] Destination: filename.ext"
+                    // or "[ExtractAudio] Destination: filename.ext"
+                    // or after merge: "[Merger] Merging formats into \"filename.ext\""
+                    if line.contains("[download] Destination:") {
+                        if let Some(filename) = line.split("Destination:").nth(1) {
+                            let filename = filename.trim();
+                            let full_path = format!("{}\\{}", folder_path, filename);
+                            *downloaded_file_clone.lock().unwrap() = Some(full_path);
+                            println!("Captured download destination: {}", filename);
+                        }
+                    } else if line.contains("[ExtractAudio] Destination:") {
+                        if let Some(filename) = line.split("Destination:").nth(1) {
+                            let filename = filename.trim();
+                            let full_path = format!("{}\\{}", folder_path, filename);
+                            *downloaded_file_clone.lock().unwrap() = Some(full_path);
+                            println!("Captured audio destination: {}", filename);
+                        }
+                    } else if line.contains("[Merger] Merging formats into") {
+                        if let Some(quoted) = line.split("into \"").nth(1) {
+                            if let Some(filename) = quoted.split('"').next() {
+                                let full_path = format!("{}\\{}", folder_path, filename);
+                                *downloaded_file_clone.lock().unwrap() = Some(full_path);
+                                println!("Captured merged file: {}", filename);
+                            }
+                        }
                     }
                     
                     // Emit console output
@@ -230,17 +267,25 @@ async fn download_from_link(
                     // Wait for output reading tasks to complete
                     let _ = tokio::join!(stdout_task, stderr_task);
                     
+                    // Get the downloaded file path
+                    let file_path = downloaded_file.lock().unwrap().clone();
+                    
                     let result = if status.success() {
                         println!("Download completed successfully for: {}", link);
+                        if let Some(ref path) = file_path {
+                            println!("Downloaded file: {}", path);
+                        }
                         DownloadResult {
                             success: true,
                             message: format!("Download completed successfully: {}", link),
+                            file_path: file_path.clone(),
                         }
                     } else {
                         println!("Download failed for: {}", link);
                         DownloadResult {
                             success: false,
                             message: format!("Download failed for: {}", link),
+                            file_path: None,
                         }
                     };
                     
@@ -248,6 +293,7 @@ async fn download_from_link(
                     let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
                         success: result.success,
                         message: result.message.clone(),
+                        file_path: result.file_path.clone(),
                     });
                     
                     Ok(result)
@@ -259,11 +305,13 @@ async fn download_from_link(
                     let result = DownloadResult {
                         success: false,
                         message: error_msg,
+                        file_path: None,
                     };
                     
                     let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
                         success: false,
                         message: result.message.clone(),
+                        file_path: None,
                     });
                     
                     Ok(result)
@@ -277,11 +325,13 @@ async fn download_from_link(
             let result = DownloadResult {
                 success: false,
                 message: error_msg,
+                file_path: None,
             };
             
             let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
                 success: false,
                 message: result.message.clone(),
+                file_path: None,
             });
             
             Ok(result)
@@ -778,38 +828,49 @@ fn open_folder(folder_path: &str) -> Result<String, String> {
     
     // Check if path exists
     if !path.exists() {
-        return Err("The folder no longer exists.".to_string());
+        return Err("The file or folder no longer exists.".to_string());
     }
+    
+    // If it's a file, open the parent folder
+    let folder_to_open = if path.is_file() {
+        path.parent()
+            .ok_or_else(|| "Could not determine parent folder.".to_string())?
+    } else {
+        path
+    };
+    
+    let folder_str = folder_to_open.to_str()
+        .ok_or_else(|| "Invalid path encoding.".to_string())?;
     
     // Platform-specific folder opening
     if cfg!(target_os = "windows") {
         match StdCommand::new("explorer")
-            .args(&[folder_path])
+            .args(&[folder_str])
             .output() {
             Ok(_) => {
-                println!("✓ Opened folder: {}", folder_path);
-                Ok("Opening folder...".to_string())
+                println!("✓ Opened folder: {}", folder_str);
+                Ok("Folder opened in Explorer.".to_string())
             }
             Err(e) => Err(format!("Failed to open folder: {}", e)),
         }
     } else if cfg!(target_os = "macos") {
         match StdCommand::new("open")
-            .args(&[folder_path])
+            .args(&[folder_str])
             .output() {
             Ok(_) => {
-                println!("✓ Opened folder: {}", folder_path);
-                Ok("Opening folder...".to_string())
+                println!("✓ Opened folder: {}", folder_str);
+                Ok("Folder opened in Finder.".to_string())
             }
             Err(e) => Err(format!("Failed to open folder: {}", e)),
         }
     } else {
         // Linux - try xdg-open
         match StdCommand::new("xdg-open")
-            .args(&[folder_path])
+            .args(&[folder_str])
             .output() {
             Ok(_) => {
-                println!("✓ Opened folder: {}", folder_path);
-                Ok("Opening folder...".to_string())
+                println!("✓ Opened folder: {}", folder_str);
+                Ok("Folder opened.".to_string())
             }
             Err(e) => Err(format!("Failed to open folder: {}", e)),
         }

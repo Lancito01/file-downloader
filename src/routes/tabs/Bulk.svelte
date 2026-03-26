@@ -15,7 +15,6 @@
         refreshSubfolders,
         createSubfolder,
         getDownloadPath,
-        downloadProgress,
         isDownloading,
         consoleOutput,
         isDependenciesReady,

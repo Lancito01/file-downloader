@@ -16,7 +16,6 @@
         refreshSubfolders,
         createSubfolder,
         getDownloadPath,
-        downloadProgress,
         isDownloading,
         consoleOutput,
         isDependenciesReady,
@@ -168,6 +167,7 @@
                     message: result.message,
                     timestamp: new Date(),
                     folder: finalFolder,
+                    file_path: result.file_path,
                 },
                 ...history,
             ].slice(0, 10); // Keep last 10
@@ -199,25 +199,32 @@
     }
 
     async function openFolderLocation(item: HistoryItem) {
-        if (!item.folder) {
-            setStatus("Folder path not available.", "warning");
+        // Use file_path if available, otherwise fall back to folder
+        const pathToOpen = item.file_path || item.folder;
+        
+        if (!pathToOpen) {
+            setStatus("File path not available.", "warning");
             return;
         }
         
         try {
             await invoke("open_folder", { 
-                folder_path: item.folder 
+                folder_path: pathToOpen
             });
-            setStatus("Opening folder...", "info");
+            setStatus(`✓ Opened folder for: ${item.link.substring(0, 50)}...`, "success");
         } catch (error) {
             console.error("Failed to open folder:", error);
-            setStatus("Could not open folder.", "error");
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            setStatus(`Failed to open folder: ${errorMsg}`, "error");
         }
     }
 
     async function deleteDownloadFile(item: HistoryItem) {
-        if (!item.folder) {
-            setStatus("Folder path not available.", "warning");
+        // Use file_path if available, otherwise fall back to folder
+        const pathToDelete = item.file_path || item.folder;
+        
+        if (!pathToDelete) {
+            setStatus("File path not available.", "warning");
             return;
         }
         
@@ -227,16 +234,17 @@
         
         try {
             // Call backend command to delete
-            const result = await invoke("delete_download_folder", { 
-                folder_path: item.folder 
+            const result = await invoke<string>("delete_download_folder", { 
+                folder_path: pathToDelete
             });
             
             // Remove from history
             history = history.filter(h => h !== item);
-            setStatus("✓ Download deleted successfully.", "success");
+            setStatus(`✓ ${result} File removed from history.`, "success");
         } catch (error) {
             console.error("Failed to delete:", error);
-            setStatus("Could not delete. The file may have already been moved or deleted.", "error");
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            setStatus(`Failed to delete: ${errorMsg}`, "error");
         }
     }
 </script>
@@ -314,44 +322,6 @@
                     ⬇️ Download Now
                 {/if}
             </button>
-
-            <!-- Progress Display -->
-            {#if $isDownloading}
-                <div class="progress-section">
-                    <div class="progress-header">
-                        <span>Download Progress</span>
-                        <button class="cancel-btn" title="Cancel download">
-                            ❌ Cancel
-                        </button>
-                    </div>
-                    
-                    {#if $downloadProgress.percentage !== undefined}
-                        <div class="progress-bar-container">
-                            <div class="progress-bar">
-                                <div 
-                                    class="progress-fill" 
-                                    style="width: {$downloadProgress.percentage}%"
-                                ></div>
-                            </div>
-                            <span class="progress-text">{$downloadProgress.percentage.toFixed(1)}%</span>
-                        </div>
-                    {/if}
-
-                    {#if $downloadProgress.speed || $downloadProgress.eta}
-                        <div class="progress-stats">
-                            {#if $downloadProgress.speed}
-                                <span class="stat">🚀 {$downloadProgress.speed}</span>
-                            {/if}
-                            {#if $downloadProgress.eta}
-                                <span class="stat">⏱️ {$downloadProgress.eta} remaining</span>
-                            {/if}
-                            {#if $downloadProgress.size}
-                                <span class="stat">📦 {$downloadProgress.size}</span>
-                            {/if}
-                        </div>
-                    {/if}
-                </div>
-            {/if}
         </div>
     </div>
 
@@ -384,6 +354,7 @@
                         {#if item.status === 'success' && item.folder}
                             <div class="history-actions">
                                 <button 
+                                    type="button"
                                     class="action-btn folder-btn"
                                     on:click={() => openFolderLocation(item)}
                                     title="Open folder location"
@@ -391,6 +362,7 @@
                                     📁
                                 </button>
                                 <button 
+                                    type="button"
                                     class="action-btn delete-btn"
                                     on:click={() => deleteDownloadFile(item)}
                                     title="Delete downloaded file"
@@ -618,21 +590,6 @@
             align-items: center;
             margin-bottom: 0.8rem;
             font-weight: 500;
-
-            .cancel-btn {
-                padding: 0.3rem 0.6rem;
-                background: rgba(255, 77, 77, 0.2);
-                border: 1px solid #ff4d4d;
-                border-radius: 0.4rem;
-                color: #ff4d4d;
-                font-size: 0.8rem;
-                cursor: pointer;
-                transition: all 0.2s ease;
-
-                &:hover {
-                    background: rgba(255, 77, 77, 0.3);
-                }
-            }
         }
 
         .progress-bar-container {

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { status, consoleOutput, downloadProgress, isDownloading } from "$lib/utils.ts";
+    import { status, consoleOutput, isDownloading } from "$lib/utils.ts";
     import { getStatusColor } from "$lib/utils.ts";
     import { onMount } from "svelte";
     
@@ -31,19 +31,6 @@
             <p class="status-text flex-1 overflow-hidden flex items-center">
                 Status:&nbsp;<span style="color: {statusColor};">{latestConsoleMessage}</span>
             </p>
-            
-            <!-- Download progress indicator -->
-            {#if $isDownloading && $downloadProgress.percentage !== undefined}
-                <div class="progress-indicator ml-2 flex items-center">
-                    <span class="text-xs mr-1">{$downloadProgress.percentage.toFixed(1)}%</span>
-                    <div class="progress-bar">
-                        <div 
-                            class="progress-fill" 
-                            style="width: {$downloadProgress.percentage}%"
-                        ></div>
-                    </div>
-                </div>
-            {/if}
             
             <!-- Console toggle button -->
             {#if $consoleOutput.length > 0}

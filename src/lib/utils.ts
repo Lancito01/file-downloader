@@ -12,6 +12,7 @@ import type {
     DownloadResult,
     YtDlpInstallResult,
     FfmpegInstallResult,
+    InstallResult,
     DependencyStatus,
     InstallationError
 } from "$lib/types";
@@ -69,18 +70,7 @@ export const initializeEventListeners = async (): Promise<void> => {
             // Update status with the latest console line
             setStatus(logEntry.line, "info");
         });
-        
-        // Listen for download progress
-        await listen('download-progress', (event: any) => {
-            const progress: DownloadProgressState = event.payload;
-            downloadProgress.set(progress);
-            
-            // Update status with progress info
-            if (progress.percentage !== undefined) {
-                setStatus(`Downloading: ${progress.percentage.toFixed(1)}%`, "info");
-            }
-        });
-        
+    
         // Listen for download completion
         await listen('download-complete', (event: any) => {
             const result = event.payload;
@@ -91,9 +81,6 @@ export const initializeEventListeners = async (): Promise<void> => {
             } else {
                 setStatus(result.message, "error");
             }
-            
-            // Clear progress
-            downloadProgress.set({});
         });
         
         console.log("Event listeners initialized successfully");
@@ -326,7 +313,6 @@ export const status = writable<Status>({
 
 // New stores for download progress and console output
 export const consoleOutput = writable<ConsoleLogEntry[]>([]);
-export const downloadProgress = writable<DownloadProgressState>({});
 export const isDownloading = writable<boolean>(false);
 
 export const setStatus = (message: string, type: Status["type"]): void => {
@@ -392,7 +378,6 @@ export async function downloadFromLink(payload: DownloadPayload): Promise<Downlo
         setStatus("Starting download...", "info");
         
         // Clear previous progress and console output
-        downloadProgress.set({});
         consoleOutput.set([]);
         
         const result = await invoke<DownloadResult>("download_from_link", {

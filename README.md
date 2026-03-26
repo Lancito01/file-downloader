@@ -20,7 +20,8 @@ run.bat
 
 These scripts will:
 - ✅ Check and configure your environment
-- ✅ Download yt-dlp if missing
+- ✅ Prompt to install yt-dlp if missing
+- ✅ Prompt to install ffmpeg/ffprobe if missing
 - ✅ Load Visual Studio environment if installed
 - ✅ Launch the app
 
@@ -35,19 +36,28 @@ If the scripts don't work or you prefer manual setup:
      - During installation, select "Desktop development with C++"
      - Include Windows 10/11 SDK
 
-2. **Download yt-dlp:**
-   - Get from: https://github.com/yt-dlp/yt-dlp/releases/latest
-   - Place `yt-dlp.exe` in `src-tauri/bin/`
+2. **Install yt-dlp (system command):**
+    - Verify: `yt-dlp --version`
+    - If missing, install via your package manager:
+      - macOS: `brew install yt-dlp`
+      - Windows: `winget install -e --id yt-dlp.yt-dlp`
+      - Cross-platform: `python -m pip install -U --user yt-dlp`
 
-3. **Install Dependencies:**
-   ```bash
-   npm install
-   ```
+3. **Install ffmpeg/ffprobe (system commands):**
+   - Verify: `ffmpeg -version` and `ffprobe -version`
+   - If missing, install via your package manager:
+     - macOS: `brew install ffmpeg`
+     - Windows: `winget install -e --id Gyan.FFmpeg`
 
-4. **Launch:**
-   ```bash
-   npm run tauri dev
-   ```
+4. **Install Dependencies:**
+    ```bash
+    npm install
+    ```
+
+5. **Launch:**
+    ```bash
+    npm run tauri dev
+    ```
 
 ## ⚠️ Troubleshooting
 
@@ -79,11 +89,21 @@ If the scripts don't work or you prefer manual setup:
 
 ### "yt-dlp not found" or Downloads Failing
 
-**Cause:** yt-dlp.exe missing from `src-tauri/bin/`
+**Cause:** yt-dlp is not installed or not available on PATH.
 
 **Solution:**
-1. Download: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe
-2. Place in: `src-tauri\bin\yt-dlp.exe`
+1. Run `yt-dlp --version` to verify it's available.
+2. If missing, install with `brew`, `winget`, or `python -m pip install -U --user yt-dlp`.
+3. Restart your terminal and relaunch the app.
+
+### "ffmpeg/ffprobe not found" or Merging Fails
+
+**Cause:** ffmpeg/ffprobe are not installed or not available on PATH.
+
+**Solution:**
+1. Run `ffmpeg -version` and `ffprobe -version` to verify they're available.
+2. If missing, install with `brew install ffmpeg` or `winget install -e --id Gyan.FFmpeg`.
+3. Restart your terminal and relaunch the app.
 
 ### First Compilation Takes Forever
 
@@ -211,7 +231,6 @@ File Downloader/
 │   │   ├── main.rs          # Main Tauri application
 │   │   └── lib.rs           # Library code
 │   ├── bin/                 # External executables
-│   │   └── yt-dlp.exe      # yt-dlp downloader (download separately)
 │   └── Cargo.toml           # Rust dependencies
 ├── setup-and-run.ps1        # Easy setup script (PowerShell)
 ├── run.bat                  # Easy launch script (Batch)

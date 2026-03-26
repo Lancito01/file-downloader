@@ -7,6 +7,10 @@
         updateStatus,
         getStatusColor,
         initializeSettings,
+        checkYtDlpInstalled,
+        installYtDlp,
+        checkFfmpegInstalled,
+        installFfmpeg,
     } from "$lib/utils.ts";
     import {
         selectedDownloadFolder,
@@ -23,7 +27,79 @@
     import StatusBar from "./StatusBar.svelte";
 
     // Automatic changing of status color based on detection of status.type
-    $: statusColor = $status?.type ? getStatusColor($status.type) : { bg: "#1a1a1a", text: "white" };
+    $: statusColor = getStatusColor($status?.type ?? null);
+
+    async function ensureYtDlpInstalled() {
+        try {
+            const installed = await checkYtDlpInstalled();
+            if (installed) return;
+
+            const shouldInstall = window.confirm(
+                "yt-dlp is required for downloads but was not found on this machine. Install it now?"
+            );
+
+            if (!shouldInstall) {
+                updateStatus({
+                    type: "error",
+                    message: "yt-dlp is not installed. Please install it to enable downloads.",
+                });
+                return;
+            }
+
+            updateStatus({
+                type: "info",
+                message: "Installing yt-dlp...",
+            });
+
+            const result = await installYtDlp();
+            updateStatus({
+                type: result.success ? "success" : "error",
+                message: result.message,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            updateStatus({
+                type: "error",
+                message: `yt-dlp install failed: ${message}`,
+            });
+        }
+    }
+
+    async function ensureFfmpegInstalled() {
+        try {
+            const installed = await checkFfmpegInstalled();
+            if (installed) return;
+
+            const shouldInstall = window.confirm(
+                "ffmpeg and ffprobe are required for downloads but were not found on this machine. Install them now?"
+            );
+
+            if (!shouldInstall) {
+                updateStatus({
+                    type: "error",
+                    message: "ffmpeg/ffprobe are not installed. Please install them to enable downloads.",
+                });
+                return;
+            }
+
+            updateStatus({
+                type: "info",
+                message: "Installing ffmpeg/ffprobe...",
+            });
+
+            const result = await installFfmpeg();
+            updateStatus({
+                type: result.success ? "success" : "error",
+                message: result.message,
+            });
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            updateStatus({
+                type: "error",
+                message: `ffmpeg install failed: ${message}`,
+            });
+        }
+    }
 
     onMount(async () => {
         // ! Initialization of settings store
@@ -47,6 +123,9 @@
             type: "info",
             message: "Idle 🌙",
         });
+
+        await ensureYtDlpInstalled();
+        await ensureFfmpegInstalled();
     });
 </script>
 

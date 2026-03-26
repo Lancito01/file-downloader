@@ -26,6 +26,6 @@
         "active": true,
         "targets": "all",
         "icon": ["icons/pikachu.ico"],
-        "resources": ["./bin/yt-dlp.exe"]
+        "resources": []
     }
 }

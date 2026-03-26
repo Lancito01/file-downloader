@@ -64,3 +64,13 @@ export type DownloadCompleteEvent = {
     success: boolean;
     message: string;
 };
+
+export type YtDlpInstallResult = {
+    success: boolean;
+    message: string;
+};
+
+export type FfmpegInstallResult = {
+    success: boolean;
+    message: string;
+};

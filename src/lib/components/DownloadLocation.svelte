@@ -11,9 +11,9 @@
     // Props
     export let disabled = false;
 
-    // Local state for selected options
-    let selectedSubfolder = "";
-    let customDestination = "";
+    // Local state for selected options (exported for parent bindings)
+    export let selectedSubfolder = "";
+    export let customDestination = "";
 
     // Reset selected subfolder when destination changes
     $: if ($currentDestination !== "subfolder") {

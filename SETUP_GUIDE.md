@@ -106,34 +106,58 @@ This installs all the JavaScript/TypeScript dependencies.
 
 ---
 
-### Step 5: Get yt-dlp.exe
+### Step 5: Install yt-dlp (system command)
 
-The app needs yt-dlp to actually download media.
+The app uses the system-installed `yt-dlp` command (not a bundled exe).
 
-✅ **Check if you have it:**
-```bash
-Test-Path ".\src-tauri\bin\yt-dlp.exe"
+✅ **Check if you already have it:**
+```powershell
+yt-dlp --version
 ```
 
-❌ **If you don't have it:**
+❌ **If it's missing, install it:**
 
 **Option A: Automated (recommended)**
 ```powershell
-# Run the setup script, it will download it for you
+# Run the setup script, it will prompt to install yt-dlp
 .\setup-and-run.ps1
 ```
 
 **Option B: Manual**
-1. Go to: https://github.com/yt-dlp/yt-dlp/releases/latest
-2. Download `yt-dlp.exe`
-3. Create folder: `src-tauri\bin` (if it doesn't exist)
-4. Move `yt-dlp.exe` to that folder
+- Windows: `winget install -e --id yt-dlp.yt-dlp`
+- Cross-platform: `python -m pip install -U --user yt-dlp`
 
-**Final path should be:** `D:\Andy\Coding\File Downloader\src-tauri\bin\yt-dlp.exe`
+After install, restart your terminal and re-run `yt-dlp --version`.
 
 ---
 
-### Step 6: Launch the App
+### Step 6: Install ffmpeg/ffprobe (system commands)
+
+The app uses ffmpeg/ffprobe for merging and audio extraction.
+
+✅ **Check if you already have them:**
+```powershell
+ffmpeg -version
+ffprobe -version
+```
+
+❌ **If they're missing, install them:**
+
+**Option A: Automated (recommended)**
+```powershell
+# Run the setup script, it will prompt to install ffmpeg/ffprobe
+.\setup-and-run.ps1
+```
+
+**Option B: Manual**
+- Windows: `winget install -e --id Gyan.FFmpeg`
+- macOS: `brew install ffmpeg`
+
+After install, restart your terminal and re-run `ffmpeg -version`.
+
+---
+
+### Step 7: Launch the App
 
 You have three options:
 
@@ -209,9 +233,16 @@ npm run tauri dev
 ### "yt-dlp not found" or downloads fail
 
 **Solution:**
-1. Verify yt-dlp.exe exists in `src-tauri\bin\`
-2. Re-download from: https://github.com/yt-dlp/yt-dlp/releases/latest
-3. Make sure it's named exactly `yt-dlp.exe` (not `yt-dlp.exe.exe`)
+1. Verify `yt-dlp --version` works in your terminal.
+2. If missing, install with `winget` or `python -m pip install -U --user yt-dlp`.
+3. Restart your terminal and relaunch the app.
+
+### "ffmpeg/ffprobe not found" or downloads fail
+
+**Solution:**
+1. Verify `ffmpeg -version` and `ffprobe -version` work in your terminal.
+2. If missing, install with `winget install -e --id Gyan.FFmpeg` or `brew install ffmpeg`.
+3. Restart your terminal and relaunch the app.
 
 ---
 
@@ -222,7 +253,8 @@ npm run tauri dev
 - ✅ Rust installed (`cargo --version` works)
 - ✅ Visual Studio Build Tools installed (can find "x64 Native Tools Command Prompt")
 - ✅ Computer restarted after installations
-- ✅ yt-dlp.exe in `src-tauri\bin\`
+- ✅ yt-dlp available on PATH (`yt-dlp --version`)
+- ✅ ffmpeg/ffprobe available on PATH (`ffmpeg -version`, `ffprobe -version`)
 - ✅ Dependencies installed (`npm install` completed)
 
 ### Debug Steps:
@@ -237,7 +269,9 @@ npm run tauri dev
    node --version
    cargo --version
    link.exe
-   Test-Path ".\src-tauri\bin\yt-dlp.exe"
+   yt-dlp --version
+   ffmpeg -version
+   ffprobe -version
    ```
 
 3. **Try compiling Rust directly:**

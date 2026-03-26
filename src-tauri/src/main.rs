@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::{Manager, Emitter};
+use tauri::Emitter;
 
 fn main() {
     tauri::Builder::default()
@@ -10,17 +10,17 @@ fn main() {
         // ✅ Dialog plugin
         .plugin(tauri_plugin_dialog::init())
         // ✅ Your commands
-        .invoke_handler(tauri::generate_handler![list_folders, download_from_link])
+        .invoke_handler(tauri::generate_handler![
+            list_folders,
+            download_from_link,
+            check_yt_dlp_installed,
+            install_yt_dlp,
+            check_ffmpeg_installed,
+            install_ffmpeg
+        ])
         // ✅ Setup logic
         .setup(|app| {
             println!("Tauri app is starting...");
-
-            let resource_path = app
-                .path()
-                .resource_dir()
-                .expect("failed to get resource dir");
-
-            app.manage(resource_path);
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -62,9 +62,8 @@ fn list_folders(path: &str) -> Vec<String> {
     folders
 }
 
-use std::path::PathBuf;
-use std::process::Stdio;
-use tauri::{AppHandle, State};
+use std::process::{Command as StdCommand, Stdio};
+use tauri::AppHandle;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -102,44 +101,53 @@ async fn download_from_link(
     extension: Option<&str>,
     embeds: bool,
     app_handle: AppHandle,
-    resource_path: State<'_, PathBuf>,
 ) -> Result<DownloadResult, String> {
-    // Get the path to yt-dlp.exe from the bundled resources
-    let yt_dlp_path = resource_path.inner().join("bin").join("yt-dlp.exe");
-
     println!("Starting async download from: {}", link);
-    println!("Using yt-dlp from: {}", yt_dlp_path.display());
+    println!("Using yt-dlp from PATH");
+
+    if !command_available("yt-dlp", &["--version"]) {
+        let error_msg = "yt-dlp is not installed or not on PATH. Please install yt-dlp and try again.".to_string();
+        let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
+            success: false,
+            message: error_msg.clone(),
+        });
+        return Err(error_msg);
+    }
 
     // Build command arguments based on format
-    let mut cmd = Command::new(&yt_dlp_path);
-    cmd.current_dir(folder)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .arg("--newline") // Force newlines for better parsing
-        .arg("--no-colors"); // Disable color codes for cleaner output
-
-    // Add progress hook for better progress parsing
-    cmd.arg("--progress-template")
-        .arg("download:%(progress.percentage)s|%(progress.speed)s|%(progress.eta)s|%(progress.total_bytes)s");
+    let mut args: Vec<String> = vec![
+        "--newline".to_string(),
+        "--no-colors".to_string(),
+        "--progress-template".to_string(),
+        "download:%(progress.percentage)s|%(progress.speed)s|%(progress.eta)s|%(progress.total_bytes)s".to_string(),
+    ];
 
     // Add format-specific arguments
     if let Some(ext) = extension {
         if format == "audio" {
-            cmd.arg("-x");
-            cmd.arg("--audio-format");
+            args.push("-x".to_string());
+            args.push("--audio-format".to_string());
         } else {
-            cmd.arg("--merge-output-format");
+            args.push("--merge-output-format".to_string());
         }
-        cmd.arg(ext);
+        args.push(ext.to_string());
     }
 
     // Add link
-    cmd.arg(link);
+    args.push(link.to_string());
 
     if embeds {
-        cmd.arg("--embed-thumbnail");
-        cmd.arg("--embed-metadata");
+        args.push("--embed-thumbnail".to_string());
+        args.push("--embed-metadata".to_string());
     }
+
+    println!("Running yt-dlp {}", args.join(" "));
+
+    let mut cmd = Command::new("yt-dlp");
+    cmd.current_dir(folder)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .args(&args);
 
     // Spawn the process
     match cmd.spawn() {
@@ -159,6 +167,8 @@ async fn download_from_link(
                 while let Ok(Some(line)) = lines.next_line().await {
                     let timestamp = chrono::Utc::now().format("%H:%M:%S%.3f").to_string();
                     
+                    println!("[yt-dlp] {}", line);
+
                     // Parse progress information
                     if let Some(progress) = parse_progress_line(&line) {
                         let _ = app_handle_stdout.emit("download-progress", progress);
@@ -179,6 +189,8 @@ async fn download_from_link(
                 while let Ok(Some(line)) = lines.next_line().await {
                     let timestamp = chrono::Utc::now().format("%H:%M:%S%.3f").to_string();
                     
+                    eprintln!("[yt-dlp] {}", line);
+
                     // Emit error output to console
                     let _ = app_handle_stderr.emit("console-output", ConsoleOutputEvent {
                         line: format!("ERROR: {}", line),
@@ -234,7 +246,7 @@ async fn download_from_link(
             }
         }
         Err(e) => {
-            let error_msg = format!("Failed to spawn yt-dlp process: {}. Make sure yt-dlp.exe is bundled with the app.", e);
+            let error_msg = format!("Failed to spawn yt-dlp process: {}. Ensure yt-dlp is installed and available on PATH.", e);
             println!("{}", error_msg);
             
             let result = DownloadResult {
@@ -250,6 +262,197 @@ async fn download_from_link(
             Ok(result)
         }
     }
+}
+
+fn command_available(command: &str, args: &[&str]) -> bool {
+    StdCommand::new(command)
+        .args(args)
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .map(|status| status.success())
+        .unwrap_or(false)
+}
+
+#[derive(serde::Serialize)]
+struct InstallResult {
+    success: bool,
+    message: String,
+}
+
+#[tauri::command]
+fn check_yt_dlp_installed() -> bool {
+    command_available("yt-dlp", &["--version"])
+}
+
+#[tauri::command]
+fn install_yt_dlp() -> Result<InstallResult, String> {
+    let message = run_install_command()?;
+    Ok(InstallResult {
+        success: true,
+        message,
+    })
+}
+
+#[tauri::command]
+fn check_ffmpeg_installed() -> bool {
+    command_available("ffmpeg", &["-version"]) && command_available("ffprobe", &["-version"])
+}
+
+#[tauri::command]
+fn install_ffmpeg() -> Result<InstallResult, String> {
+    let message = run_install_ffmpeg()?;
+    Ok(InstallResult {
+        success: true,
+        message,
+    })
+}
+
+fn run_install_command() -> Result<String, String> {
+    let mut attempts: Vec<(&str, Vec<&str>)> = Vec::new();
+
+    if cfg!(target_os = "macos") {
+        if command_available("brew", &["--version"]) {
+            attempts.push(("brew", vec!["install", "yt-dlp"]));
+        }
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["install", "yt-dlp"]));
+        }
+        if command_available("python3", &["--version"]) {
+            attempts.push(("python3", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
+        }
+    } else if cfg!(target_os = "windows") {
+        if command_available("winget", &["--version"]) {
+            attempts.push((
+                "winget",
+                vec![
+                    "install",
+                    "-e",
+                    "--id",
+                    "yt-dlp.yt-dlp",
+                    "--accept-source-agreements",
+                    "--accept-package-agreements",
+                ],
+            ));
+        }
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["install", "yt-dlp"]));
+        }
+        if command_available("python", &["--version"]) {
+            attempts.push(("python", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
+        }
+    } else {
+        if command_available("pipx", &["--version"]) {
+            attempts.push(("pipx", vec!["install", "yt-dlp"]));
+        }
+        if command_available("python3", &["--version"]) {
+            attempts.push(("python3", vec!["-m", "pip", "install", "-U", "--user", "yt-dlp"]));
+        }
+    }
+
+    if attempts.is_empty() {
+        return Err("No supported installer found. Please install yt-dlp manually from https://github.com/yt-dlp/yt-dlp".to_string());
+    }
+
+    let mut last_error = String::from("Unknown error");
+    for (command, args) in attempts {
+        let output = StdCommand::new(command).args(&args).output();
+        match output {
+            Ok(output) if output.status.success() => {
+                if command_available("yt-dlp", &["--version"]) {
+                    return Ok(format!("yt-dlp installed using {}.", command));
+                }
+                return Err(format!(
+                    "{} completed, but yt-dlp is still not on PATH. Please restart your terminal and try again.",
+                    command
+                ));
+            }
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                last_error = format!("{} {}",
+                    stdout.trim(),
+                    stderr.trim()
+                ).trim().to_string();
+            }
+            Err(error) => {
+                last_error = error.to_string();
+            }
+        }
+    }
+
+    Err(format!("yt-dlp install failed. {}", last_error))
+}
+
+fn run_install_ffmpeg() -> Result<String, String> {
+    let mut attempts: Vec<(&str, Vec<&str>)> = Vec::new();
+
+    if cfg!(target_os = "macos") {
+        if command_available("brew", &["--version"]) {
+            attempts.push(("brew", vec!["install", "ffmpeg"]));
+        }
+    } else if cfg!(target_os = "windows") {
+        if command_available("winget", &["--version"]) {
+            attempts.push((
+                "winget",
+                vec![
+                    "install",
+                    "-e",
+                    "--id",
+                    "Gyan.FFmpeg",
+                    "--accept-source-agreements",
+                    "--accept-package-agreements",
+                ],
+            ));
+            attempts.push((
+                "winget",
+                vec![
+                    "install",
+                    "-e",
+                    "--id",
+                    "FFmpeg.FFmpeg",
+                    "--accept-source-agreements",
+                    "--accept-package-agreements",
+                ],
+            ));
+        }
+    } else {
+        if command_available("sudo", &["-n", "true"]) && command_available("apt-get", &["--version"]) {
+            attempts.push(("sudo", vec!["apt-get", "install", "-y", "ffmpeg"]));
+        } else if command_available("apt-get", &["--version"]) {
+            attempts.push(("apt-get", vec!["install", "-y", "ffmpeg"]));
+        }
+    }
+
+    if attempts.is_empty() {
+        return Err("No supported installer found. Please install ffmpeg manually from https://ffmpeg.org/".to_string());
+    }
+
+    let mut last_error = String::from("Unknown error");
+    for (command, args) in attempts {
+        let output = StdCommand::new(command).args(&args).output();
+        match output {
+            Ok(output) if output.status.success() => {
+                if check_ffmpeg_installed() {
+                    return Ok(format!("ffmpeg installed using {}.", command));
+                }
+                return Err(format!(
+                    "{} completed, but ffmpeg/ffprobe are still not on PATH. Please restart your terminal and try again.",
+                    command
+                ));
+            }
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                last_error = format!("{} {}", stdout.trim(), stderr.trim()).trim().to_string();
+            }
+            Err(error) => {
+                last_error = error.to_string();
+            }
+        }
+    }
+
+    Err(format!("ffmpeg install failed. {}", last_error))
 }
 
 fn parse_progress_line(line: &str) -> Option<DownloadProgressEvent> {

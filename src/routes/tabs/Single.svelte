@@ -26,6 +26,10 @@
     let format: DownloadFormat = $defaultFormat;
     let extension = getDefaultExtension(format);
     let embedExtras = $embedMetadata;
+    let history: HistoryItem[] = [];
+    let canDownload = false;
+    let selectedSubfolder = "";
+    let customDestination = "";
 
     function getDefaultExtension(fmt: DownloadFormat): string {
         return fmt === FORMATS.AUDIO ? $defaultAudioExtension : $defaultVideoExtension;
@@ -96,8 +100,8 @@
 
     // Compute if download is possible (reactive statement)
     $: canDownload = !$isDownloading && 
-        link.trim() && 
-        $selectedDownloadFolder &&
+        link.trim().length > 0 &&
+        Boolean($selectedDownloadFolder) &&
         (!extension || validateExtension(extension));
 
     async function handleDownload() {
@@ -242,7 +246,11 @@
             </label>
 
             <!-- Download Location -->
-            <DownloadLocation disabled={$isDownloading} />
+            <DownloadLocation
+                disabled={$isDownloading}
+                bind:selectedSubfolder
+                bind:customDestination
+            />
 
             <button
                 class="download-btn"

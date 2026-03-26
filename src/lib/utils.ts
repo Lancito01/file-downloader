@@ -9,7 +9,9 @@ import type {
     DownloadProgressState,
     DownloadFormat,
     DownloadPayload,
-    DownloadResult
+    DownloadResult,
+    YtDlpInstallResult,
+    FfmpegInstallResult
 } from "$lib/types";
 
 export let settings: Store | null = null;
@@ -96,6 +98,22 @@ export const initializeEventListeners = async (): Promise<void> => {
     } catch (error) {
         console.error("Failed to initialize event listeners:", error);
     }
+};
+
+export const checkYtDlpInstalled = async (): Promise<boolean> => {
+    return await invoke<boolean>("check_yt_dlp_installed");
+};
+
+export const installYtDlp = async (): Promise<YtDlpInstallResult> => {
+    return await invoke<YtDlpInstallResult>("install_yt_dlp");
+};
+
+export const checkFfmpegInstalled = async (): Promise<boolean> => {
+    return await invoke<boolean>("check_ffmpeg_installed");
+};
+
+export const installFfmpeg = async (): Promise<FfmpegInstallResult> => {
+    return await invoke<FfmpegInstallResult>("install_ffmpeg");
 };
 
 export const updateStatus = (newStatus: Status): void => {
@@ -275,8 +293,9 @@ export async function saveDownloadFolderSetting() {
     }
 }
 
-export function getStatusColor(): string {
-    switch (get(status).type) {
+export function getStatusColor(type: Status["type"] | null = null): string {
+    const resolvedType = type ?? get(status).type;
+    switch (resolvedType) {
         case "success":
             return "#4dff88";
         case "error":

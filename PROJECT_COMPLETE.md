@@ -17,7 +17,7 @@ The File Downloader project has been **fully completed** and is ready to use!
 - **DownloadResult Struct:** Proper serialization with success/message fields
 - **Error Handling:** Detailed error messages from yt-dlp with graceful failure handling
 - **Command System:** Working list_folders and download_from_link commands
-- **Resource Management:** Proper bundling of yt-dlp executable
+- **Resource Management:** Uses system-installed yt-dlp via PATH
 
 ### ✅ State Management & Utilities
 - **Store System:** Reactive stores for folder, format, embed metadata, and active tab

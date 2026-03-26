@@ -6,7 +6,7 @@
     let consoleContainer: HTMLElement;
     let showConsole = false;
     
-    $: statusColor = $status?.type ? getStatusColor($status.type) : { bg: "#1a1a1a", text: "white" };
+    $: statusColor = getStatusColor($status?.type ?? null);
     
     // Auto-scroll console output to bottom when new messages arrive
     $: if ($consoleOutput.length > 0 && consoleContainer) {

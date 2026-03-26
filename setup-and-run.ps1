@@ -85,47 +85,89 @@ set
     }
 }
 
-# Step 3: Verify yt-dlp.exe exists
+# Step 3: Verify yt-dlp is installed
 Write-Host ""
-Write-Host "[3/4] Checking for yt-dlp.exe..." -ForegroundColor Yellow
+Write-Host "[3/5] Checking for yt-dlp..." -ForegroundColor Yellow
 
-$ytdlpPath = ".\src-tauri\bin\yt-dlp.exe"
-if (Test-Path $ytdlpPath) {
-    Write-Host "✅ yt-dlp.exe found" -ForegroundColor Green
+$ytdlpCmd = Get-Command yt-dlp -ErrorAction SilentlyContinue
+if ($ytdlpCmd) {
+    Write-Host "✅ yt-dlp found in PATH" -ForegroundColor Green
 } else {
-    Write-Host "❌ yt-dlp.exe not found at $ytdlpPath" -ForegroundColor Red
+    Write-Host "❌ yt-dlp not found in PATH" -ForegroundColor Red
     Write-Host ""
-    Write-Host "   Please download yt-dlp.exe from:" -ForegroundColor Yellow
-    Write-Host "   https://github.com/yt-dlp/yt-dlp/releases/latest" -ForegroundColor Cyan
-    Write-Host "   And place it in: src-tauri\bin\yt-dlp.exe" -ForegroundColor Yellow
+    Write-Host "   yt-dlp is required for downloads." -ForegroundColor Yellow
     Write-Host ""
     
-    $response = Read-Host "Do you want to download it now? (Y/n)"
+    $response = Read-Host "Do you want to install it now? (Y/n)"
     if ($response -ne "n" -and $response -ne "N") {
-        Write-Host "   Downloading yt-dlp.exe..." -ForegroundColor Gray
-        
-        # Create bin directory if it doesn't exist
-        $binDir = ".\src-tauri\bin"
-        if (-not (Test-Path $binDir)) {
-            New-Item -ItemType Directory -Path $binDir | Out-Null
-        }
-        
-        # Download latest yt-dlp
-        try {
-            Invoke-WebRequest -Uri "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe" -OutFile $ytdlpPath
-            Write-Host "   ✅ Downloaded yt-dlp.exe" -ForegroundColor Green
-        } catch {
-            Write-Host "   ❌ Failed to download: $_" -ForegroundColor Red
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Write-Host "   Installing yt-dlp via winget..." -ForegroundColor Gray
+            winget install -e --id yt-dlp.yt-dlp --accept-source-agreements --accept-package-agreements
+        } elseif (Get-Command pipx -ErrorAction SilentlyContinue) {
+            Write-Host "   Installing yt-dlp via pipx..." -ForegroundColor Gray
+            pipx install yt-dlp
+        } elseif (Get-Command python -ErrorAction SilentlyContinue) {
+            Write-Host "   Installing yt-dlp via python pip..." -ForegroundColor Gray
+            python -m pip install -U --user yt-dlp
+        } else {
+            Write-Host "   ❌ No supported installer found. Please install yt-dlp manually:" -ForegroundColor Red
+            Write-Host "   https://github.com/yt-dlp/yt-dlp" -ForegroundColor Cyan
             exit 1
+        }
+
+        $ytdlpCmd = Get-Command yt-dlp -ErrorAction SilentlyContinue
+        if ($ytdlpCmd) {
+            Write-Host "   ✅ yt-dlp installed successfully" -ForegroundColor Green
+        } else {
+            Write-Host "   ❌ yt-dlp installation completed but not found in PATH." -ForegroundColor Red
+            Write-Host "   Please restart your terminal and try again." -ForegroundColor Yellow
         }
     } else {
         Write-Host "   ⚠️  Continuing without yt-dlp - downloads will not work!" -ForegroundColor Yellow
     }
 }
 
-# Step 4: Launch the app
+# Step 4: Verify ffmpeg/ffprobe are installed
 Write-Host ""
-Write-Host "[4/4] Launching File Downloader..." -ForegroundColor Yellow
+Write-Host "[4/5] Checking for ffmpeg/ffprobe..." -ForegroundColor Yellow
+
+$ffmpegCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+$ffprobeCmd = Get-Command ffprobe -ErrorAction SilentlyContinue
+if ($ffmpegCmd -and $ffprobeCmd) {
+    Write-Host "✅ ffmpeg and ffprobe found in PATH" -ForegroundColor Green
+} else {
+    Write-Host "❌ ffmpeg/ffprobe not found in PATH" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "   ffmpeg and ffprobe are required for downloads." -ForegroundColor Yellow
+    Write-Host ""
+    
+    $response = Read-Host "Do you want to install them now? (Y/n)"
+    if ($response -ne "n" -and $response -ne "N") {
+        if (Get-Command winget -ErrorAction SilentlyContinue) {
+            Write-Host "   Installing ffmpeg via winget..." -ForegroundColor Gray
+            winget install -e --id Gyan.FFmpeg --accept-source-agreements --accept-package-agreements
+        } else {
+            Write-Host "   ❌ No supported installer found. Please install ffmpeg manually:" -ForegroundColor Red
+            Write-Host "   https://ffmpeg.org/download.html" -ForegroundColor Cyan
+            exit 1
+        }
+
+        $ffmpegCmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
+        $ffprobeCmd = Get-Command ffprobe -ErrorAction SilentlyContinue
+        if ($ffmpegCmd -and $ffprobeCmd) {
+            Write-Host "   ✅ ffmpeg/ffprobe installed successfully" -ForegroundColor Green
+        } else {
+            Write-Host "   ❌ ffmpeg/ffprobe installation completed but not found in PATH." -ForegroundColor Red
+            Write-Host "   Please restart your terminal and try again." -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "   ⚠️  Continuing without ffmpeg/ffprobe - downloads may fail!" -ForegroundColor Yellow
+    }
+}
+
+# Step 5: Launch the app
+Write-Host ""
+Write-Host "[5/5] Launching File Downloader..." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "This may take a while on first run (compiling Rust code)..." -ForegroundColor Gray
 Write-Host "The app window will open when ready." -ForegroundColor Gray

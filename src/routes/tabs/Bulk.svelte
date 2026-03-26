@@ -30,6 +30,8 @@
     let queue: QueueItem[] = [];
     let completed = 0;
     let failed = 0;
+    let selectedSubfolder = "";
+    let customDestination = "";
 
     function getDefaultExtension(fmt: DownloadFormat): string {
         return fmt === FORMATS.AUDIO ? $defaultAudioExtension : $defaultVideoExtension;
@@ -261,7 +263,11 @@
             </label>
 
             <!-- Download Location -->
-            <DownloadLocation disabled={running} />
+            <DownloadLocation
+                disabled={running}
+                bind:selectedSubfolder
+                bind:customDestination
+            />
 
             <div class="button-group">
                 <button

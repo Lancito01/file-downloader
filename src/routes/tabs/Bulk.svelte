@@ -32,6 +32,7 @@
     let failed = 0;
     let selectedSubfolder = "";
     let customDestination = "";
+    let searchService: "youtube" | "soundcloud" = "youtube";
 
     function getDefaultExtension(fmt: DownloadFormat): string {
         return fmt === FORMATS.AUDIO ? $defaultAudioExtension : $defaultVideoExtension;
@@ -82,6 +83,29 @@
             .split(/[\n,]+/)
             .map((link) => link.trim())
             .filter((link) => link.length > 0);
+    }
+
+    function isLink(input: string): boolean {
+        const trimmed = input.trim();
+        // Check if it's already a search query
+        if (/^(yt|sc|bc)search\d*:/.test(trimmed)) return false;
+        // Try to parse as URL
+        try {
+            new URL(trimmed);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function addSearchPrefix(input: string): string {
+        const trimmed = input.trim();
+        // If it's already a search or link, don't modify
+        if (/^(yt|sc|bc)search\d*:/.test(trimmed)) return trimmed;
+        if (isLink(trimmed)) return trimmed;
+        // Add prefix for search queries
+        const prefix = searchService === "youtube" ? "ytsearch:" : "scsearch:";
+        return prefix + trimmed;
     }
 
     function validateExtension(ext: string): boolean {
@@ -142,12 +166,15 @@
         completed = 0;
         failed = 0;
 
-        // Initialize queue
-        queue = links.map((link) => ({
-            link,
-            status: "pending",
-            message: "Waiting...",
-        }));
+        // Initialize queue - apply search prefix when needed
+        queue = links.map((link) => {
+            const processedLink = addSearchPrefix(link);
+            return {
+                link: processedLink,
+                status: "pending",
+                message: "Waiting...",
+            };
+        });
 
         setStatus(`Starting bulk download of ${links.length} items...`, "info");
 
@@ -225,13 +252,40 @@
             <label class="field">
                 <span class="label-text">Links (one per line)</span>
                 <textarea
-                    placeholder="https://youtube.com/watch?v=...&#10;https://soundcloud.com/...&#10;ytsearch:song name"
+                    placeholder="https://youtube.com/watch?v=...&#10;https://soundcloud.com/...&#10;or just search terms"
                     bind:value={linksInput}
                     disabled={running}
                     rows="8"
                 ></textarea>
-                <span class="help-text">Enter URLs or search terms, one per line. You can also separate with commas.</span>
+                <span class="help-text">Enter URLs or search terms, one per line. For search terms, use selector below.</span>
             </label>
+
+            <!-- Search Service Selector -->
+            <div class="search-service-selector">
+                <span class="selector-label">Search Service (for non-links):</span>
+                <div class="service-buttons">
+                    <button
+                        type="button"
+                        class="service-btn"
+                        class:active={searchService === 'youtube'}
+                        on:click={() => (searchService = 'youtube')}
+                        disabled={running}
+                        title="Use YouTube search for non-link queries"
+                    >
+                        🎥 YouTube
+                    </button>
+                    <button
+                        type="button"
+                        class="service-btn"
+                        class:active={searchService === 'soundcloud'}
+                        on:click={() => (searchService = 'soundcloud')}
+                        disabled={running}
+                        title="Use SoundCloud search for non-link queries"
+                    >
+                        ☁️ SoundCloud
+                    </button>
+                </div>
+            </div>
 
             <div class="options-grid">
                 <label class="field">
@@ -404,6 +458,59 @@
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+    }
+
+    .search-service-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+
+        .selector-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: $text;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .service-buttons {
+            display: flex;
+            gap: 0.6rem;
+
+            @media (max-width: 600px) {
+                flex-direction: column;
+            }
+        }
+    }
+
+    .service-btn {
+        flex: 1;
+        padding: 0.7rem 1rem;
+        background: $surface;
+        border: 2px solid $border;
+        border-radius: 0.6rem;
+        color: $text-muted;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+            border-color: $accent;
+            background: rgba(245, 177, 27, 0.05);
+        }
+
+        &.active {
+            border-color: $accent;
+            background: rgba(245, 177, 27, 0.15);
+            color: $accent;
+            font-weight: 600;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     }
 
     .field {

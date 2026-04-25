@@ -13,7 +13,7 @@ More info and automated migrator: https://sass-lang.com/d/import
 2 Γöé     @import "$lib/styles/global.scss";
   Γöé             ^^^^^^^^^^^^^^^^^^^^^^^^^
   Γò╡
-    ..\..\..\..\src\routes\+page.svelte.vite-preprocess.scss 2:13  root stylesheet
+    ..\..\..\..\src\routes\StatusBar.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
 
@@ -33,7 +33,27 @@ More info and automated migrator: https://sass-lang.com/d/import
 2 Γöé     @import "$lib/styles/global.scss";
   Γöé             ^^^^^^^^^^^^^^^^^^^^^^^^^
   Γò╡
-    ..\..\..\..\src\routes\StatusBar.svelte.vite-preprocess.scss 2:13  root stylesheet
+    ..\..\..\..\src\routes\page-original.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+  Γò╖
+2 Γöé     @import "$lib/styles/global.scss";
+  Γöé             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  Γò╡
+    ..\..\..\..\src\routes\+page.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+  Γò╖
+2 Γöé     @import "$lib/styles/global.scss";
+  Γöé             ^^^^^^^^^^^^^^^^^^^^^^^^^
+  Γò╡
+    ..\..\..\..\src\lib\components\DownloadLocation.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [import]: Sass @import rules are deprecated and will be removed in Dart Sass 3.0.0.
 
@@ -74,8 +94,8 @@ More info and automated migrator: https://sass-lang.com/d/import
 26 Γöé $bg1: lighten($bg0, $amount: 5%);
    Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                  @import
-    ..\..\..\..\src\routes\Nav.svelte.vite-preprocess.scss 2:13  root stylesheet
+    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
+    ..\..\..\..\src\routes\StatusBar.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
@@ -88,8 +108,8 @@ More info: https://sass-lang.com/d/color-functions
 26 Γöé $bg1: lighten($bg0, $amount: 5%);
    Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                  @import
-    ..\..\..\..\src\routes\Nav.svelte.vite-preprocess.scss 2:13  root stylesheet
+    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
+    ..\..\..\..\src\routes\StatusBar.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
@@ -97,23 +117,37 @@ Use color.adjust instead.
 More info and automated migrator: https://sass-lang.com/d/import
 
    Γò╖
-19 Γöé                 background-color: lighten($bg0, 10%);
-   Γöé                                   ^^^^^^^^^^^^^^^^^^
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    Γò╡
-    ..\..\..\..\src\routes\Nav.svelte.vite-preprocess.scss 19:35  root stylesheet
+    ..\..\..\..\src\lib\styles\global.scss 26:7                            @import
+    ..\..\..\..\src\routes\page-original.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
-color.scale($color, $lightness: 10%)
-color.adjust($color, $lightness: 10%)
+color.scale($color, $lightness: 5%)
+color.adjust($color, $lightness: 5%)
 
 More info: https://sass-lang.com/d/color-functions
 
    Γò╖
-19 Γöé                 background-color: lighten($bg0, 10%);
-   Γöé                                   ^^^^^^^^^^^^^^^^^^
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    Γò╡
-    ..\..\..\..\src\routes\Nav.svelte.vite-preprocess.scss 19:35  root stylesheet
+    ..\..\..\..\src\lib\styles\global.scss 26:7                            @import
+    ..\..\..\..\src\routes\page-original.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.adjust instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                  @import
+    ..\..\..\..\src\routes\Nav.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
@@ -138,9 +172,73 @@ More info: https://sass-lang.com/d/color-functions
 26 Γöé $bg1: lighten($bg0, $amount: 5%);
    Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                  @import
+    ..\..\..\..\src\routes\Nav.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.adjust instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                                       @import
+    ..\..\..\..\src\lib\components\DownloadLocation.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
+
+color.scale($color, $lightness: 5%)
+color.adjust($color, $lightness: 5%)
+
+More info: https://sass-lang.com/d/color-functions
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
     ..\..\..\..\src\lib\styles\global.scss 26:7                    @import
     ..\..\..\..\src\routes\+page.svelte.vite-preprocess.scss 2:13  root stylesheet
 
+DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
+
+color.scale($color, $lightness: 5%)
+color.adjust($color, $lightness: 5%)
+
+More info: https://sass-lang.com/d/color-functions
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                                       @import
+    ..\..\..\..\src\lib\components\DownloadLocation.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.adjust instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.adjust instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                          @import
+    ..\..\..\..\src\routes\tabs\Single.svelte.vite-preprocess.scss 2:13  root stylesheet
+
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
 
@@ -153,10 +251,12 @@ More info and automated migrator: https://sass-lang.com/d/import
     ..\..\..\..\src\lib\styles\global.scss 26:7                            @import
     ..\..\..\..\src\routes\tabs\Settings.svelte.vite-preprocess.scss 2:13  root stylesheet
 
-DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
-Use color.adjust instead.
+DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
-More info and automated migrator: https://sass-lang.com/d/import
+color.scale($color, $lightness: 5%)
+color.adjust($color, $lightness: 5%)
+
+More info: https://sass-lang.com/d/color-functions
 
    Γò╖
 26 Γöé $bg1: lighten($bg0, $amount: 5%);
@@ -176,34 +276,33 @@ More info: https://sass-lang.com/d/color-functions
 26 Γöé $bg1: lighten($bg0, $amount: 5%);
    Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
    Γò╡
+    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 2:13  root stylesheet
+
+DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
+
+color.scale($color, $lightness: 5%)
+color.adjust($color, $lightness: 5%)
+
+More info: https://sass-lang.com/d/color-functions
+
+   Γò╖
+26 Γöé $bg1: lighten($bg0, $amount: 5%);
+   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+   Γò╡
     ..\..\..\..\src\lib\styles\global.scss 26:7                            @import
     ..\..\..\..\src\routes\tabs\Settings.svelte.vite-preprocess.scss 2:13  root stylesheet
 
-DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
-
-color.scale($color, $lightness: 5%)
-color.adjust($color, $lightness: 5%)
-
-More info: https://sass-lang.com/d/color-functions
-
-   Γò╖
-26 Γöé $bg1: lighten($bg0, $amount: 5%);
-   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                          @import
-    ..\..\..\..\src\routes\tabs\Single.svelte.vite-preprocess.scss 2:13  root stylesheet
-
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
 
 More info and automated migrator: https://sass-lang.com/d/import
 
    Γò╖
-26 Γöé $bg1: lighten($bg0, $amount: 5%);
-   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+78 Γöé                 background: lighten($surface, 3%);
+   Γöé                             ^^^^^^^^^^^^^^^^^^^^^
    Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
-    ..\..\..\..\src\routes\StatusBar.svelte.vite-preprocess.scss 2:13  root stylesheet
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 78:29  root stylesheet
 
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
@@ -218,28 +317,16 @@ More info and automated migrator: https://sass-lang.com/d/import
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
-color.scale($color, $lightness: 5%)
-color.adjust($color, $lightness: 5%)
+color.scale($color, $lightness: 3.3406113537%)
+color.adjust($color, $lightness: 3%)
 
 More info: https://sass-lang.com/d/color-functions
 
    Γò╖
-26 Γöé $bg1: lighten($bg0, $amount: 5%);
-   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+78 Γöé                 background: lighten($surface, 3%);
+   Γöé                             ^^^^^^^^^^^^^^^^^^^^^
    Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
-    ..\..\..\..\src\routes\StatusBar.svelte.vite-preprocess.scss 2:13  root stylesheet
-
-DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
-Use color.adjust instead.
-
-More info and automated migrator: https://sass-lang.com/d/import
-
-    Γò╖
-240 Γöé             background: linear-gradient(135deg, $accent, lighten($accent, 10%));
-    Γöé                                                          ^^^^^^^^^^^^^^^^^^^^^
-    Γò╡
-    ..\..\..\..\src\routes\tabs\Settings.svelte.vite-preprocess.scss 240:58  root stylesheet
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 78:29  root stylesheet
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
@@ -254,18 +341,16 @@ More info: https://sass-lang.com/d/color-functions
    Γò╡
     ..\..\..\..\src\routes\tabs\Single.svelte.vite-preprocess.scss 76:29  root stylesheet
 
-DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
+DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.adjust instead.
 
-color.scale($color, $lightness: 21.4285714286%)
-color.adjust($color, $lightness: 10%)
-
-More info: https://sass-lang.com/d/color-functions
+More info and automated migrator: https://sass-lang.com/d/import
 
     Γò╖
-240 Γöé             background: linear-gradient(135deg, $accent, lighten($accent, 10%));
+313 Γöé             background: linear-gradient(135deg, $accent, lighten($accent, 10%));
     Γöé                                                          ^^^^^^^^^^^^^^^^^^^^^
     Γò╡
-    ..\..\..\..\src\routes\tabs\Settings.svelte.vite-preprocess.scss 240:58  root stylesheet
+    ..\..\..\..\src\routes\tabs\Settings.svelte.vite-preprocess.scss 313:58  root stylesheet
 
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
@@ -277,18 +362,6 @@ More info and automated migrator: https://sass-lang.com/d/import
     Γöé                                                      ^^^^^^^^^^^^^^^^^^^^^
     Γò╡
     ..\..\..\..\src\routes\tabs\Single.svelte.vite-preprocess.scss 152:54  root stylesheet
-
-DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
-Use color.adjust instead.
-
-More info and automated migrator: https://sass-lang.com/d/import
-
-   Γò╖
-26 Γöé $bg1: lighten($bg0, $amount: 5%);
-   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 2:13  root stylesheet
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
@@ -305,17 +378,40 @@ More info: https://sass-lang.com/d/color-functions
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
-color.scale($color, $lightness: 5%)
-color.adjust($color, $lightness: 5%)
+color.scale($color, $lightness: 21.4285714286%)
+color.adjust($color, $lightness: 10%)
 
 More info: https://sass-lang.com/d/color-functions
 
-   Γò╖
-26 Γöé $bg1: lighten($bg0, $amount: 5%);
-   Γöé       ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   Γò╡
-    ..\..\..\..\src\lib\styles\global.scss 26:7                        @import
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 2:13  root stylesheet
+    Γò╖
+313 Γöé             background: linear-gradient(135deg, $accent, lighten($accent, 10%));
+    Γöé                                                          ^^^^^^^^^^^^^^^^^^^^^
+    Γò╡
+    ..\..\..\..\src\routes\tabs\Settings.svelte.vite-preprocess.scss 313:58  root stylesheet
+
+DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
+Use color.adjust instead.
+
+More info and automated migrator: https://sass-lang.com/d/import
+
+    Γò╖
+235 Γöé                     background: lighten($accent, 10%);
+    Γöé                                 ^^^^^^^^^^^^^^^^^^^^^
+    Γò╡
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 235:33  root stylesheet
+
+DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
+
+color.scale($color, $lightness: 21.4285714286%)
+color.adjust($color, $lightness: 10%)
+
+More info: https://sass-lang.com/d/color-functions
+
+    Γò╖
+235 Γöé                     background: lighten($accent, 10%);
+    Γöé                                 ^^^^^^^^^^^^^^^^^^^^^
+    Γò╡
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 235:33  root stylesheet
 
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
@@ -327,17 +423,6 @@ More info and automated migrator: https://sass-lang.com/d/import
     Γöé                                                 ^^^^^^^^^^^^^^^^^^^^
     Γò╡
     ..\..\..\..\src\routes\tabs\Single.svelte.vite-preprocess.scss 180:49  root stylesheet
-
-DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
-Use color.adjust instead.
-
-More info and automated migrator: https://sass-lang.com/d/import
-
-   Γò╖
-78 Γöé                 background: lighten($surface, 3%);
-   Γöé                             ^^^^^^^^^^^^^^^^^^^^^
-   Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 78:29  root stylesheet
 
 DEPRECATION WARNING [color-functions]: darken() is deprecated. Suggestions:
 
@@ -352,29 +437,16 @@ More info: https://sass-lang.com/d/color-functions
     Γò╡
     ..\..\..\..\src\routes\tabs\Single.svelte.vite-preprocess.scss 180:49  root stylesheet
 
-DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
-
-color.scale($color, $lightness: 3.3406113537%)
-color.adjust($color, $lightness: 3%)
-
-More info: https://sass-lang.com/d/color-functions
-
-   Γò╖
-78 Γöé                 background: lighten($surface, 3%);
-   Γöé                             ^^^^^^^^^^^^^^^^^^^^^
-   Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 78:29  root stylesheet
-
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
 
 More info and automated migrator: https://sass-lang.com/d/import
 
     Γò╖
-165 Γöé         background: linear-gradient(135deg, $accent, lighten($accent, 10%));
+322 Γöé         background: linear-gradient(135deg, $accent, lighten($accent, 10%));
     Γöé                                                      ^^^^^^^^^^^^^^^^^^^^^
     Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 165:54  root stylesheet
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 322:54  root stylesheet
 
 DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
 
@@ -384,10 +456,10 @@ color.adjust($color, $lightness: 10%)
 More info: https://sass-lang.com/d/color-functions
 
     Γò╖
-165 Γöé         background: linear-gradient(135deg, $accent, lighten($accent, 10%));
+322 Γöé         background: linear-gradient(135deg, $accent, lighten($accent, 10%));
     Γöé                                                      ^^^^^^^^^^^^^^^^^^^^^
     Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 165:54  root stylesheet
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 322:54  root stylesheet
 
 DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
 Use color.adjust instead.
@@ -395,10 +467,10 @@ Use color.adjust instead.
 More info and automated migrator: https://sass-lang.com/d/import
 
     Γò╖
-189 Γöé             background: linear-gradient(135deg, darken($accent, 10%), $accent);
+346 Γöé             background: linear-gradient(135deg, darken($accent, 10%), $accent);
     Γöé                                                 ^^^^^^^^^^^^^^^^^^^^
     Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 189:49  root stylesheet
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 346:49  root stylesheet
 
 DEPRECATION WARNING [color-functions]: darken() is deprecated. Suggestions:
 
@@ -408,168 +480,192 @@ color.adjust($color, $lightness: -10%)
 More info: https://sass-lang.com/d/color-functions
 
     Γò╖
-189 Γöé             background: linear-gradient(135deg, darken($accent, 10%), $accent);
+346 Γöé             background: linear-gradient(135deg, darken($accent, 10%), $accent);
     Γöé                                                 ^^^^^^^^^^^^^^^^^^^^
     Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 189:49  root stylesheet
+    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 346:49  root stylesheet
 
-DEPRECATION WARNING [global-builtin]: Global built-in functions are deprecated and will be removed in Dart Sass 3.0.0.
-Use color.adjust instead.
+WARNING: 2 repetitive deprecation warnings omitted.
+Run in verbose mode to see all warnings.
 
-More info and automated migrator: https://sass-lang.com/d/import
+d:\Andy\Coding\File Downloader\[32msrc\lib\components\DependencyCheck.svelte[39m:4:5
+[31mError[39m: Cannot use `export let` in runes mode ΓÇö use `$props()` instead
+https://svelte.dev/e/legacy_export_invalid (svelte)
+[36m
+    [35mexport let status: DependencyStatus | null = null;[36m
+    export let loading: boolean = false;[39m
 
-    Γò╖
-293 Γöé             background: linear-gradient(90deg, $accent, lighten($accent, 10%));
-    Γöé                                                         ^^^^^^^^^^^^^^^^^^^^^
-    Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 293:57  root stylesheet
+d:\Andy\Coding\File Downloader\[32msrc\lib\components\DownloadLocation.svelte[39m:12:5
+[31mError[39m: Cannot use `export let` in runes mode ΓÇö use `$props()` instead
+https://svelte.dev/e/legacy_export_invalid (svelte)
+[36m    // Props
+    [35mexport let disabled = false;[36m[39m
 
-DEPRECATION WARNING [color-functions]: lighten() is deprecated. Suggestions:
+d:\Andy\Coding\File Downloader\[32msrc\lib\components\ErrorDisplay.svelte[39m:4:5
+[31mError[39m: Cannot use `export let` in runes mode ΓÇö use `$props()` instead
+https://svelte.dev/e/legacy_export_invalid (svelte)
+[36m
+    [35mexport let error: InstallationError | null = null;[36m
+    export let onDismiss: (() => void) | null = null;[39m
 
-color.scale($color, $lightness: 21.4285714286%)
-color.adjust($color, $lightness: 10%)
+d:\Andy\Coding\File Downloader\[32msrc\routes\+layout.svelte[39m:10:1
+[33mWarn[39m: Using `<slot>` to render parent content is deprecated. Use `{@render ...}` tags instead
+https://svelte.dev/e/slot_element_deprecated (svelte)
+[36m
+[35m<slot></slot>[36m[39m
 
-More info: https://sass-lang.com/d/color-functions
+d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Single.svelte[39m:41:5
+[31mError[39m: `$:` is not allowed in runes mode, use `$derived` or `$effect` instead
+https://svelte.dev/e/legacy_reactive_statement_invalid (svelte)
+[36m    // Initialize subfolder list when component loads
+    [35m$: if ($selectedDownloadFolder) {
+        refreshSubfolders();
+    }[36m[39m
 
-    Γò╖
-293 Γöé             background: linear-gradient(90deg, $accent, lighten($accent, 10%));
-    Γöé                                                         ^^^^^^^^^^^^^^^^^^^^^
-    Γò╡
-    ..\..\..\..\src\routes\tabs\Bulk.svelte.vite-preprocess.scss 293:57  root stylesheet
+d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Bulk.svelte[39m:41:5
+[31mError[39m: `$:` is not allowed in runes mode, use `$derived` or `$effect` instead
+https://svelte.dev/e/legacy_reactive_statement_invalid (svelte)
+[36m    // Initialize subfolder list when component loads
+    [35m$: if ($selectedDownloadFolder) {
+        refreshSubfolders();
+    }[36m[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\lib\utils.ts[39m:34:36
-[31mError[39m: Argument of type '{}' is not assignable to parameter of type 'string'. 
-[36m    if (savedFolder) {
-        selectedDownloadFolder.set([35msavedFolder[36m);
-    }[39m
+d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Settings.svelte[39m:28:5
+[31mError[39m: `$:` is not allowed in runes mode, use `$derived` or `$effect` instead
+https://svelte.dev/e/legacy_reactive_statement_invalid (svelte)
+[36m    // Track changes
+    [35m$: hasChanges = localFormat !== $defaultFormat || 
+        localEmbed !== $embedMetadata ||
+        localAudioExt !== $defaultAudioExtension ||
+        localVideoExt !== $defaultVideoExtension;[36m[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Single.svelte[39m:234:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:26:9
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m        aria-expanded={menuOpen}
+        [35mon:click={toggleMenu}[36m
+    >[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:33:5
+[33mWarn[39m: Visible, non-interactive elements with a click event must be accompanied by a keyboard event handler. Consider whether an interactive element such as `<button type="button">` or `<a>` might be more appropriate
+https://svelte.dev/e/a11y_click_events_have_key_events (svelte)
+[36m{#if menuOpen}
+    [35m<div class="menu-overlay" on:click={closeMenu}></div>[36m
+{/if}[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:33:5
+[33mWarn[39m: `<div>` with a click handler must have an ARIA role
+https://svelte.dev/e/a11y_no_static_element_interactions (svelte)
+[36m{#if menuOpen}
+    [35m<div class="menu-overlay" on:click={closeMenu}></div>[36m
+{/if}[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:33:31
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m{#if menuOpen}
+    <div class="menu-overlay" [35mon:click={closeMenu}[36m></div>
+{/if}[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:42:13
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            aria-label="Close navigation menu"
+            [35mon:click={closeMenu}[36m
+        >[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:53:13
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            class:active={$activeTab == "single"}
+            [35mon:click={() => handleTabClick("single")}[36m
+        >[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:63:13
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            class:active={$activeTab == "bulk"}
+            [35mon:click={() => handleTabClick("bulk")}[36m
+        >[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:73:13
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m            class:active={$activeTab == "settings"}
+            [35mon:click={() => handleTabClick("settings")}[36m
+        >[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:4:9
+[33mWarn[39m: `menuOpen` is updated, but is not declared with `$state(...)`. Changing its value will not correctly trigger updates
+https://svelte.dev/e/non_reactive_update (svelte)
+[36m
+    let [35mmenuOpen[36m = false;[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:81:20
 [33mWarn[39m: Unused CSS selector "h1"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
 <style lang="scss">[35m[36m
     @import "$lib/styles/global.scss";[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Single.svelte[39m:234:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:81:20
 [33mWarn[39m: Unused CSS selector "h2"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
 <style lang="scss">[35m[36m
     @import "$lib/styles/global.scss";[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Single.svelte[39m:234:20
-[33mWarn[39m: Unused CSS selector "h4"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Bulk.svelte[39m:286:20
-[33mWarn[39m: Unused CSS selector "h1"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Bulk.svelte[39m:286:20
-[33mWarn[39m: Unused CSS selector "h2"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Bulk.svelte[39m:286:20
-[33mWarn[39m: Unused CSS selector "h4"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Settings.svelte[39m:134:20
-[33mWarn[39m: Unused CSS selector "h1"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\tabs\Settings.svelte[39m:134:20
-[33mWarn[39m: Unused CSS selector "h2"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:34:20
-[33mWarn[39m: Unused CSS selector "h1"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:34:20
-[33mWarn[39m: Unused CSS selector "h2"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:34:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:81:20
 [33mWarn[39m: Unused CSS selector "h3"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
 <style lang="scss">[35m[36m
     @import "$lib/styles/global.scss";[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:34:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:81:20
 [33mWarn[39m: Unused CSS selector "h4"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
 <style lang="scss">[35m[36m
     @import "$lib/styles/global.scss";[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:34:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\Nav.svelte[39m:81:20
 [33mWarn[39m: Unused CSS selector "p"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
 <style lang="scss">[35m[36m
     @import "$lib/styles/global.scss";[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\StatusBar.svelte[39m:17:20
-[33mWarn[39m: Unused CSS selector "h1"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
+d:\Andy\Coding\File Downloader\[32msrc\routes\StatusBar.svelte[39m:13:5
+[31mError[39m: `$:` is not allowed in runes mode, use `$derived` or `$effect` instead
+https://svelte.dev/e/legacy_reactive_statement_invalid (svelte)
+[36m    // Auto-scroll console output to bottom when new messages arrive
+    [35m$: if ($consoleOutput.length > 0 && consoleContainer) {
+        consoleContainer.scrollTop = consoleContainer.scrollHeight;
+    }[36m[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\StatusBar.svelte[39m:17:20
-[33mWarn[39m: Unused CSS selector "h2"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
+d:\Andy\Coding\File Downloader\[32msrc\routes\+page.svelte[39m:153:37
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            <h4>1∩╕ÅΓâú First, choose your default Music folder:</h4>
+                            <button [35mon:click={browseFolder}[36m>Select Music Folder</button>
+                            {#if $selectedDownloadFolder}[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\StatusBar.svelte[39m:17:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\+page.svelte[39m:163:29
+[33mWarn[39m: Using `on:click` to listen to the click event is deprecated. Use the event attribute `onclick` instead
+https://svelte.dev/e/event_directive_deprecated (svelte)
+[36m                            class="w-1/2 max-w-20 self-center text-center"
+                            [35mon:click={saveDownloadFolderSetting}[36m>Save</button
+                        >[39m
+
+d:\Andy\Coding\File Downloader\[32msrc\routes\+page.svelte[39m:185:20
 [33mWarn[39m: Unused CSS selector "h3"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
 <style lang="scss">[35m[36m
     @import "$lib/styles/global.scss";[39m
 
-d:\Andy\Coding\File Downloader\[32msrc\routes\StatusBar.svelte[39m:17:20
-[33mWarn[39m: Unused CSS selector "h4"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\StatusBar.svelte[39m:17:20
-[33mWarn[39m: Unused CSS selector ".statusp"
-https://svelte.dev/e/css_unused_selector (svelte)
-[36m
-<style lang="scss">[35m[36m
-    @import "$lib/styles/global.scss";[39m
-
-d:\Andy\Coding\File Downloader\[32msrc\routes\+page.svelte[39m:105:20
+d:\Andy\Coding\File Downloader\[32msrc\routes\page-original.svelte[39m:106:20
 [33mWarn[39m: Unused CSS selector "h3"
 https://svelte.dev/e/css_unused_selector (svelte)
 [36m
@@ -577,5 +673,5 @@ https://svelte.dev/e/css_unused_selector (svelte)
     @import "$lib/styles/global.scss";[39m
 
 ====================================
-[31msvelte-check found 1 error and 19 warnings in 7 files
+[31msvelte-check found 7 errors and 19 warnings in 11 files
 [39m

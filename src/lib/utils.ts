@@ -105,8 +105,8 @@ export const checkYtDlpVersion = async (): Promise<[string | null, string | null
     return await invoke<[string | null, string | null, boolean]>("check_yt_dlp_version");
 };
 
-export const getDependencyStatus = async (): Promise<any> => {
-    return await invoke<any>("get_dependency_status");
+export const getDependencyStatus = async (): Promise<DependencyStatus> => {
+    return await invoke<DependencyStatus>("get_dependency_status");
 };
 
 export const updateYtDlp = async (): Promise<InstallResult> => {
@@ -359,6 +359,38 @@ export const defaultFormat = writable<DownloadFormat>(FORMATS.AUDIO);
 export const embedMetadata = writable<boolean>(true);
 export const defaultAudioExtension = writable<string>("");
 export const defaultVideoExtension = writable<string>("");
+
+// Search platform preference store
+export const searchPlatform = writable<"youtube" | "soundcloud">("youtube");
+
+// Utility function to detect if input is a URL or search query
+export function isUrl(input: string): boolean {
+    const trimmed = input.trim();
+    // Check if already has search prefix
+    if (/^(yt|sc|bc)search\d*:/.test(trimmed)) {
+        return false;
+    }
+    try {
+        new URL(trimmed);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+// Apply search platform prefix to non-URL queries
+export function applySearchPrefix(input: string, platform: "youtube" | "soundcloud"): string {
+    const trimmed = input.trim();
+    
+    // If it's a URL or already has a search prefix, return as-is
+    if (isUrl(trimmed) || /^(yt|sc|bc)search\d*:/.test(trimmed)) {
+        return trimmed;
+    }
+    
+    // Apply the appropriate search prefix
+    const prefix = platform === "youtube" ? "ytsearch:" : "scsearch:";
+    return prefix + trimmed;
+}
 
 // Download function
 export async function downloadFromLink(payload: DownloadPayload): Promise<DownloadResult> {

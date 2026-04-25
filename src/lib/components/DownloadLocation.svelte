@@ -23,10 +23,8 @@
     async function handleCreateSubfolder() {
         if ($newSubfolderName.trim()) {
             const success = await createSubfolder($newSubfolderName);
-            if (success) {
-                currentDestination.set($newSubfolderName);
-                newSubfolderName.set("");
-            }
+            // Don't clear the name - keep it so the download logic can use it
+            // The folder has been created, user can now download to it
         }
     }
 
@@ -111,23 +109,15 @@
         
         {#if $currentDestination === "new"}
             <div class="new-folder-section">
-                <div class="input-group">
-                    <input
-                        type="text"
-                        placeholder="Enter folder name"
-                        bind:value={$newSubfolderName}
-                        {disabled}
-                        class="field-input"
-                        on:keydown={(e) => e.key === 'Enter' && handleCreateSubfolder()}
-                    />
-                    <button 
-                        class="create-folder-btn"
-                        on:click={handleCreateSubfolder}
-                        disabled={disabled || !$newSubfolderName.trim()}
-                    >
-                        Create
-                    </button>
-                </div>
+                <input
+                    type="text"
+                    placeholder="Enter folder name"
+                    bind:value={$newSubfolderName}
+                    {disabled}
+                    class="field-input"
+                    on:keydown={(e) => e.key === 'Enter' && handleCreateSubfolder()}
+                    on:blur={handleCreateSubfolder}
+                />
             </div>
         {/if}
 
@@ -296,40 +286,6 @@
         &:disabled {
             opacity: 0.6;
             cursor: not-allowed;
-        }
-    }
-
-    .input-group {
-        display: flex;
-        gap: 0.75rem;
-        align-items: center;
-
-        .field-input {
-            flex: 1;
-        }
-    }
-
-    .create-folder-btn {
-        padding: 0.7rem 1.25rem;
-        background: rgba(245, 177, 27, 0.15);
-        border: 1px solid $accent;
-        border-radius: 0.6rem;
-        color: $accent;
-        font-size: 0.9rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-
-        &:hover {
-            background: rgba(245, 177, 27, 0.25);
-            transform: translateY(-1px);
-        }
-
-        &:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
         }
     }
 

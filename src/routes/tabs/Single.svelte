@@ -1,7 +1,6 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
     import { invoke } from "@tauri-apps/api/core";
-    import { confirm as confirmDialog } from "@tauri-apps/plugin-dialog";
     import { FORMATS } from "$lib/assets/keys";
     import {
         downloadFromLink,
@@ -20,6 +19,9 @@
         isDownloading,
         consoleOutput,
         isDependenciesReady,
+        searchPlatform,
+        isUrl,
+        applySearchPrefix,
     } from "$lib/utils";
     import type { DownloadFormat, HistoryItem } from "$lib/types";
     import DownloadLocation from "$lib/components/DownloadLocation.svelte";
@@ -32,6 +34,7 @@
     let canDownload = false;
     let selectedSubfolder = "";
     let customDestination = "";
+    let searchService: "youtube" | "soundcloud" = "youtube";
 
     function getDefaultExtension(fmt: DownloadFormat): string {
         return fmt === FORMATS.AUDIO ? $defaultAudioExtension : $defaultVideoExtension;
@@ -77,6 +80,29 @@
         unsubAudioExt();
         unsubVideoExt();
     });
+
+    function isLink(input: string): boolean {
+        const trimmed = input.trim();
+        // Check if it's already a search query
+        if (/^(yt|sc|bc)search\d*:/.test(trimmed)) return false;
+        // Try to parse as URL
+        try {
+            new URL(trimmed);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function addSearchPrefix(input: string): string {
+        const trimmed = input.trim();
+        // If it's already a search or link, don't modify
+        if (/^(yt|sc|bc)search\d*:/.test(trimmed)) return trimmed;
+        if (isLink(trimmed)) return trimmed;
+        // Add prefix for search queries
+        const prefix = searchService === "youtube" ? "ytsearch:" : "scsearch:";
+        return prefix + trimmed;
+    }
 
     function validateURL(url: string): boolean {
         const trimmed = url.trim();
@@ -153,8 +179,9 @@
         setStatus("Starting download...", "warning");
 
         try {
+            const processedLink = addSearchPrefix(link);
             const result = await downloadFromLink({
-                link,
+                link: processedLink,
                 folder: finalFolder,
                 format,
                 extension: extension.trim() || undefined,
@@ -163,7 +190,7 @@
 
             history = [
                 {
-                    link,
+                    link: processedLink,
                     status: (result.success ? "success" : "error") as "success" | "error",
                     message: result.message,
                     timestamp: new Date(),
@@ -220,34 +247,7 @@
         }
     }
 
-    async function deleteDownloadFile(item: HistoryItem) {
-        // Use file_path if available, otherwise fall back to folder
-        const pathToDelete = item.file_path || item.folder;
-        
-        if (!pathToDelete) {
-            setStatus("File path not available.", "warning");
-            return;
-        }
-        
-        // Show confirmation
-        const confirmed = await confirmDialog("Delete the downloaded file(s) from your computer? This cannot be undone.");
-        if (!confirmed) return;
-        
-        try {
-            // Call backend command to delete
-            const result = await invoke<string>("delete_download_folder", { 
-                folderPath: pathToDelete
-            });
-            
-            // Remove from history
-            history = history.filter(h => h !== item);
-            setStatus(`✓ ${result} File removed from history.`, "success");
-        } catch (error) {
-            console.error("Failed to delete:", error);
-            const errorMsg = error instanceof Error ? error.message : String(error);
-            setStatus(`Failed to delete: ${errorMsg}`, "error");
-        }
-    }
+
 </script>
 
 <div class="single-container">
@@ -267,8 +267,35 @@
                     disabled={$isDownloading}
                     on:keydown={(e) => e.key === 'Enter' && handleDownload()}
                 />
-                <span class="help-text">Enter a URL or use "ytsearch:song name" for YouTube search or "scsearch:song name" for SoundCloud search</span>
+                <span class="help-text">Enter a URL or search term (for search queries, use selector below)</span>
             </label>
+
+            <!-- Search Service Selector -->
+            <div class="search-service-selector">
+                <span class="selector-label">Search Service:</span>
+                <div class="service-buttons">
+                    <button
+                        type="button"
+                        class="service-btn"
+                        class:active={searchService === 'youtube'}
+                        on:click={() => (searchService = 'youtube')}
+                        disabled={$isDownloading || isLink(link)}
+                        title="Use YouTube search for non-link queries"
+                    >
+                        🎥 YouTube
+                    </button>
+                    <button
+                        type="button"
+                        class="service-btn"
+                        class:active={searchService === 'soundcloud'}
+                        on:click={() => (searchService = 'soundcloud')}
+                        disabled={$isDownloading || isLink(link)}
+                        title="Use SoundCloud search for non-link queries"
+                    >
+                        ☁️ SoundCloud
+                    </button>
+                </div>
+            </div>
 
             <div class="options-grid">
                 <label class="field">
@@ -362,14 +389,6 @@
                                 >
                                     📁
                                 </button>
-                                <button 
-                                    type="button"
-                                    class="action-btn delete-btn"
-                                    on:click={() => deleteDownloadFile(item)}
-                                    title="Delete downloaded file"
-                                >
-                                    🗑️
-                                </button>
                             </div>
                         {/if}
                     </div>
@@ -425,6 +444,59 @@
         display: flex;
         flex-direction: column;
         gap: 1.25rem;
+    }
+
+    .search-service-selector {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+
+        .selector-label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: $text;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .service-buttons {
+            display: flex;
+            gap: 0.6rem;
+
+            @media (max-width: 600px) {
+                flex-direction: column;
+            }
+        }
+    }
+
+    .service-btn {
+        flex: 1;
+        padding: 0.7rem 1rem;
+        background: $surface;
+        border: 2px solid $border;
+        border-radius: 0.6rem;
+        color: $text-muted;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+            border-color: $accent;
+            background: rgba(245, 177, 27, 0.05);
+        }
+
+        &.active {
+            border-color: $accent;
+            background: rgba(245, 177, 27, 0.15);
+            color: $accent;
+            font-weight: 600;
+        }
+
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     }
 
     .field {
@@ -812,11 +884,6 @@
         &.folder-btn:hover {
             background: rgba(100, 150, 255, 0.15);
             border-color: rgba(100, 150, 255, 0.3);
-        }
-
-        &.delete-btn:hover {
-            background: rgba(255, 100, 100, 0.15);
-            border-color: rgba(255, 100, 100, 0.3);
         }
     }
 </style>

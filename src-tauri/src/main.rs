@@ -125,11 +125,13 @@ async fn download_from_link(
 
     if !command_available("yt-dlp", &["--version"]) {
         let error_msg = "yt-dlp is not installed or not on PATH. Please install yt-dlp and try again.".to_string();
-        let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
+        if let Err(e) = app_handle.emit("download-complete", DownloadCompleteEvent {
             success: false,
             message: error_msg.clone(),
             file_path: None,
-        });
+        }) {
+            eprintln!("Failed to emit download-complete event: {}", e);
+        }
         return Err(error_msg);
     }
 
@@ -205,7 +207,9 @@ async fn download_from_link(
 
                     // Parse progress information
                     if let Some(progress) = parse_progress_line(&line) {
-                        let _ = app_handle_stdout.emit("download-progress", progress);
+                        if let Err(e) = app_handle_stdout.emit("download-progress", progress) {
+                            eprintln!("Failed to emit download-progress event: {}", e);
+                        }
                     }
                     
                     // Capture downloaded file path
@@ -215,21 +219,21 @@ async fn download_from_link(
                     if line.contains("[download] Destination:") {
                         if let Some(filename) = line.split("Destination:").nth(1) {
                             let filename = filename.trim();
-                            let full_path = format!("{}\\{}", folder_path, filename);
+                            let full_path = Path::new(&folder_path).join(filename).display().to_string();
                             *downloaded_file_clone.lock().unwrap() = Some(full_path);
                             println!("Captured download destination: {}", filename);
                         }
                     } else if line.contains("[ExtractAudio] Destination:") {
                         if let Some(filename) = line.split("Destination:").nth(1) {
                             let filename = filename.trim();
-                            let full_path = format!("{}\\{}", folder_path, filename);
+                            let full_path = Path::new(&folder_path).join(filename).display().to_string();
                             *downloaded_file_clone.lock().unwrap() = Some(full_path);
                             println!("Captured audio destination: {}", filename);
                         }
                     } else if line.contains("[Merger] Merging formats into") {
                         if let Some(quoted) = line.split("into \"").nth(1) {
                             if let Some(filename) = quoted.split('"').next() {
-                                let full_path = format!("{}\\{}", folder_path, filename);
+                                let full_path = Path::new(&folder_path).join(filename).display().to_string();
                                 *downloaded_file_clone.lock().unwrap() = Some(full_path);
                                 println!("Captured merged file: {}", filename);
                             }
@@ -237,10 +241,12 @@ async fn download_from_link(
                     }
                     
                     // Emit console output
-                    let _ = app_handle_stdout.emit("console-output", ConsoleOutputEvent {
+                    if let Err(e) = app_handle_stdout.emit("console-output", ConsoleOutputEvent {
                         line: line.clone(),
                         timestamp: timestamp.clone(),
-                    });
+                    }) {
+                        eprintln!("Failed to emit console-output event: {}", e);
+                    }
                 }
             });
 
@@ -254,10 +260,12 @@ async fn download_from_link(
                     eprintln!("[yt-dlp] {}", line);
 
                     // Emit error output to console
-                    let _ = app_handle_stderr.emit("console-output", ConsoleOutputEvent {
+                    if let Err(e) = app_handle_stderr.emit("console-output", ConsoleOutputEvent {
                         line: format!("ERROR: {}", line),
                         timestamp,
-                    });
+                    }) {
+                        eprintln!("Failed to emit console-output event: {}", e);
+                    }
                 }
             });
 
@@ -290,11 +298,13 @@ async fn download_from_link(
                     };
                     
                     // Emit completion event
-                    let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
+                    if let Err(e) = app_handle.emit("download-complete", DownloadCompleteEvent {
                         success: result.success,
                         message: result.message.clone(),
                         file_path: result.file_path.clone(),
-                    });
+                    }) {
+                        eprintln!("Failed to emit download-complete event: {}", e);
+                    }
                     
                     Ok(result)
                 }
@@ -308,11 +318,13 @@ async fn download_from_link(
                         file_path: None,
                     };
                     
-                    let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
+                    if let Err(emit_err) = app_handle.emit("download-complete", DownloadCompleteEvent {
                         success: false,
                         message: result.message.clone(),
                         file_path: None,
-                    });
+                    }) {
+                        eprintln!("Failed to emit download-complete event: {}", emit_err);
+                    }
                     
                     Ok(result)
                 }
@@ -328,11 +340,13 @@ async fn download_from_link(
                 file_path: None,
             };
             
-            let _ = app_handle.emit("download-complete", DownloadCompleteEvent {
+            if let Err(emit_err) = app_handle.emit("download-complete", DownloadCompleteEvent {
                 success: false,
                 message: result.message.clone(),
                 file_path: None,
-            });
+            }) {
+                eprintln!("Failed to emit download-complete event: {}", emit_err);
+            }
             
             Ok(result)
         }
@@ -659,10 +673,11 @@ fn get_ffmpeg_path(app_handle: AppHandle) -> String {
         .and_then(|p| Some(p.display().to_string()));
     
     if let Some(base) = resource_path {
+        let base_path = Path::new(&base);
         let ffmpeg_dir = if cfg!(target_os = "windows") {
-            format!("{}\\bin\\windows", base)
+            base_path.join("bin\\windows").display().to_string()
         } else if cfg!(target_os = "macos") {
-            format!("{}/bin/macos", base)
+            base_path.join("bin/macos").display().to_string()
         } else {
             // Linux: return common system directories
             if std::path::Path::new("/usr/bin/ffmpeg").exists() {
@@ -675,9 +690,9 @@ fn get_ffmpeg_path(app_handle: AppHandle) -> String {
         };
         
         let ffmpeg_exe_path = if cfg!(target_os = "windows") {
-            format!("{}\\ffmpeg.exe", ffmpeg_dir)
+            Path::new(&ffmpeg_dir).join("ffmpeg.exe").display().to_string()
         } else {
-            format!("{}/ffmpeg", ffmpeg_dir)
+            Path::new(&ffmpeg_dir).join("ffmpeg").display().to_string()
         };
         
         if std::path::Path::new(&ffmpeg_exe_path).exists() {
@@ -719,9 +734,9 @@ fn get_dependency_status(app_handle: AppHandle) -> DependencyStatus {
         "System".to_string()
     } else if let Some(base) = app_handle.path().resource_dir().ok() {
         let ffmpeg_path = if cfg!(target_os = "windows") {
-            base.join("bin\\windows\\ffmpeg.exe")
+            base.join("bin").join("windows").join("ffmpeg.exe")
         } else if cfg!(target_os = "macos") {
-            base.join("bin/macos/ffmpeg")
+            base.join("bin").join("macos").join("ffmpeg")
         } else {
             std::path::PathBuf::from("")
         };

@@ -71,7 +71,7 @@
                     <div class="settings flex flex-col mt-1 gap-2.5">
                         <div class="musicFolder">
                             <h4>1️⃣ First, choose your default Music folder:</h4>
-                            <button on:click={browseFolder}>Select Music Folder</button>
+                            <button onclick={browseFolder}>Select Music Folder</button>
                             {#if $selectedDownloadFolder}
                                 <p>{$selectedDownloadFolder}</p>
                             {/if}
@@ -81,7 +81,7 @@
                         <h2 class="text-lg">Everything looks good? ⬇️</h2>
                         <button
                             class="w-1/2 max-w-20 self-center text-center"
-                            on:click={saveDownloadFolderSetting}>Save</button
+                            onclick={saveDownloadFolderSetting}>Save</button
                         >
                     </div>
                 </div>

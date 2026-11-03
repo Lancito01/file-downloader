@@ -1,7 +1,7 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
     "productName": "Andy's Downloader",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "identifier": "com.andy.file-downloader",
     "build": {
         "frontendDist": "../build",
@@ -13,8 +13,11 @@
         "windows": [
             {
                 "title": "Andy's Downloader",
-                "width": 800,
-                "height": 600,
+                "width": 1000,
+                "height": 720,
+                "minWidth": 760,
+                "minHeight": 560,
+                "backgroundColor": "#0f1012",
                 "resizable": true
             }
         ],
@@ -24,8 +27,18 @@
     },
     "bundle": {
         "active": true,
-        "targets": "all",
+        "targets": ["msi"],
+        "createUpdaterArtifacts": true,
         "icon": ["icons/pikachu.ico"],
         "resources": []
+    },
+    "plugins": {
+        "updater": {
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYwOTk4RjczQ0ZGQ0REODMKUldTRDNmelBjNCtaWUUweGNQMElYdCs5bkdrUVEyeTQzK01ndzFoK3VYeklTZnV6bDNrb2Y0RU0K",
+            "endpoints": ["https://github.com/Lancito01/file-downloader/releases/latest/download/latest.json"],
+            "windows": {
+                "installMode": "passive"
+            }
+        }
     }
 }

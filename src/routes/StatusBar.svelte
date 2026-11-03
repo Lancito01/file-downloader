@@ -1,189 +1,168 @@
 <script lang="ts">
-    import { status, consoleOutput, isDownloading } from "$lib/utils.ts";
-    import { getStatusColor } from "$lib/utils.ts";
-    import { onMount } from "svelte";
-    
-    let consoleContainer: HTMLElement;
+    import { consoleOutput, status } from "$lib/utils";
+    import Icon from "$lib/components/Icon.svelte";
+
     let showConsole = false;
-    
-    $: statusColor = getStatusColor($status?.type ?? null);
-    
-    // Auto-scroll console output to bottom when new messages arrive
-    $: if ($consoleOutput.length > 0 && consoleContainer) {
-        consoleContainer.scrollTop = consoleContainer.scrollHeight;
-    }
-    
-    // Get the latest console message for the main status line
-    $: latestConsoleMessage = $consoleOutput.length > 0 
-        ? $consoleOutput[$consoleOutput.length - 1].line 
-        : ($status?.message || "Ready");
-    
-    // Toggle console display
+    let copied = false;
+
     function toggleConsole() {
         showConsole = !showConsole;
+    }
+
+    async function copyLog() {
+        const text = $consoleOutput.map((entry) => `[${entry.timestamp}] ${entry.line}`).join("\n");
+        await navigator.clipboard.writeText(text);
+        copied = true;
+        setTimeout(() => (copied = false), 1500);
     }
 </script>
 
 <div class="status-bar">
-    <!-- Main status line -->
-    <div class="status flex flex-row w-full h-9 items-center z-50 px-2.5 text-sm">
-        <div class="flex items-center w-full h-full">
-            <p class="status-text flex-1 overflow-hidden flex items-center">
-                Status:&nbsp;<span style="color: {statusColor};">{latestConsoleMessage}</span>
-            </p>
-            
-            <!-- Console toggle button -->
-            {#if $consoleOutput.length > 0}
-                <button 
-                    class="console-toggle ml-2 px-1 text-xs"
-                    on:click={toggleConsole}
-                    title={showConsole ? "Hide console" : "Show console"}
-                >
-                    {showConsole ? "▼" : "▲"}
-                </button>
-            {/if}
-        </div>
-    </div>
-    
-    <!-- Expandable console output -->
-    {#if showConsole && $consoleOutput.length > 0}
-        <div class="console-output">
+    {#if showConsole}
+        <div class="console">
             <div class="console-header">
-                <span>Console Output</span>
-                <button 
-                    class="clear-console" 
-                    on:click={() => consoleOutput.set([])}
-                    title="Clear console"
-                >
-                    Clear
-                </button>
+                <span>Log</span>
+                <div class="console-actions">
+                    <button type="button" class="btn btn-ghost btn-small" on:click={copyLog} disabled={$consoleOutput.length === 0}>
+                        {copied ? "Copied" : "Copy"}
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-small" on:click={() => consoleOutput.set([])} disabled={$consoleOutput.length === 0}>
+                        Clear
+                    </button>
+                </div>
             </div>
-            <div 
-                class="console-messages" 
-                bind:this={consoleContainer}
-            >
-                {#each $consoleOutput as entry}
-                    <div class="console-entry">
-                        <span class="timestamp">[{entry.timestamp}]</span>
-                        <span class="message">{entry.line}</span>
-                    </div>
-                {/each}
+            <!-- column-reverse keeps this pinned to the newest line without any scripting -->
+            <div class="console-scroll">
+                <div class="console-messages selectable">
+                    {#each $consoleOutput as entry}
+                        <div
+                            class="console-entry"
+                            class:is-error={entry.line.startsWith("ERROR")}
+                            class:is-warning={entry.line.startsWith("WARNING")}
+                        >
+                            <span class="timestamp">{entry.timestamp}</span>
+                            <span>{entry.line}</span>
+                        </div>
+                    {:else}
+                        <p class="console-empty">Output from yt-dlp will show up here.</p>
+                    {/each}
+                </div>
             </div>
         </div>
     {/if}
+
+    <div class="status-line">
+        <span class="dot {$status.type ?? 'idle'}"></span>
+        <p class="message" title={$status.message}>{$status.message || "Ready"}</p>
+        <button
+            type="button"
+            class="btn btn-ghost btn-small"
+            aria-expanded={showConsole}
+            on:click={toggleConsole}
+        >
+            <Icon name="terminal" size={14} /> Log
+        </button>
+    </div>
 </div>
 
 <style lang="scss">
-    @import "$lib/styles/global.scss";
-    
     .status-bar {
-        position: relative;
+        flex-shrink: 0;
+        background: var(--panel);
+        border-top: 1px solid var(--line);
     }
-    
-    .status {
-        font-family: $font-mono;
-        background-color: $bg1;
-        color: $text;
-        
-        .status-text {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            height: 100%;
-            max-height: 100%;
+
+    .status-line {
+        height: 36px;
+        padding: 0 6px 0 14px;
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 12px;
+    }
+
+    .dot {
+        width: 7px;
+        height: 7px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: var(--text-faint);
+
+        &.success {
+            background: var(--success);
         }
-        
-        .progress-indicator .progress-bar {
-            width: 60px;
-            height: 4px;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            overflow: hidden;
-            
-            .progress-fill {
-                height: 100%;
-                background: linear-gradient(90deg, #4dff88, #00ff47);
-                transition: width 0.3s ease;
-            }
+        &.error {
+            background: var(--error);
         }
-        
-        .console-toggle {
-            background: rgba(255, 255, 255, 0.1);
-            border: none;
-            color: $text;
-            border-radius: 3px;
-            cursor: pointer;
-            height: 20px;
-            min-width: 20px;
-            
-            &:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
+        &.warning {
+            background: var(--warning);
+        }
+        &.info {
+            background: var(--accent);
         }
     }
-    
-    .console-output {
-        position: absolute;
-        bottom: 100%;
-        left: 0;
-        right: 0;
-        background-color: $bg1;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        max-height: 200px;
-        font-family: $font-mono;
-        font-size: 0.75rem;
-        z-index: 100;
-        
-        .console-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.25rem 0.5rem;
-            background-color: rgba(255, 255, 255, 0.05);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            
-            .clear-console {
-                background: rgba(255, 255, 255, 0.1);
-                border: none;
-                color: $text;
-                border-radius: 3px;
-                cursor: pointer;
-                padding: 2px 6px;
-                font-size: 0.7rem;
-                
-                &:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                }
-            }
+
+    .message {
+        flex: 1;
+        min-width: 0;
+        color: var(--text-muted);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .console {
+        border-bottom: 1px solid var(--line);
+    }
+
+    .console-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 4px 6px 4px 14px;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+    }
+
+    .console-actions {
+        display: flex;
+        gap: 2px;
+    }
+
+    .console-scroll {
+        height: 200px;
+        display: flex;
+        flex-direction: column-reverse;
+        overflow-y: auto;
+    }
+
+    .console-messages {
+        padding: 2px 14px 10px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.55;
+    }
+
+    .console-entry {
+        display: flex;
+        gap: 10px;
+        overflow-wrap: anywhere;
+
+        &.is-error {
+            color: var(--error);
         }
-        
-        .console-messages {
-            max-height: 160px;
-            overflow-y: auto;
-            padding: 0.25rem 0;
-            
-            .console-entry {
-                padding: 1px 0.5rem;
-                display: flex;
-                font-size: 0.7rem;
-                line-height: 1.2;
-                
-                &:hover {
-                    background-color: rgba(255, 255, 255, 0.02);
-                }
-                
-                .timestamp {
-                    color: rgba(255, 255, 255, 0.5);
-                    margin-right: 0.5rem;
-                    flex-shrink: 0;
-                    font-size: 0.65rem;
-                }
-                
-                .message {
-                    flex: 1;
-                    word-break: break-all;
-                }
-            }
+        &.is-warning {
+            color: var(--warning);
         }
+    }
+
+    .timestamp {
+        flex-shrink: 0;
+        color: var(--text-faint);
+    }
+
+    .console-empty {
+        color: var(--text-faint);
     }
 </style>

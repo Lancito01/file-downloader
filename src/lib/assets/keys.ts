@@ -23,6 +23,10 @@ export const SETTINGS_KEYS = {
         id: "defaultVideoExtension",
         text: "Default Video Extension",
     },
+    HISTORY: {
+        id: "history",
+        text: "Recent Downloads",
+    },
 } as const;
 
 export const FORMATS = {

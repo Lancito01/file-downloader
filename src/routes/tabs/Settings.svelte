@@ -1,796 +1,300 @@
 <script lang="ts">
-    import { onMount, onDestroy } from "svelte";
-    import { FORMATS, SETTINGS_KEYS } from "$lib/assets/keys";
+    import { FORMATS } from "$lib/assets/keys";
     import {
+        activeTab,
+        appVersion,
         browseFolder,
-        saveDownloadFolderSetting,
-        setStatus,
-        selectedDownloadFolder,
-        defaultFormat,
-        embedMetadata,
-        defaultAudioExtension,
-        defaultVideoExtension,
-        updateSettingsWithKey,
+        bulkRunning,
+        checkDependencies,
+        checkForUpdates,
+        defaultOptions,
         dependencyStatus,
-        checkDependenciesOnLaunch,
-        updateYtDlp,
         installFfmpeg,
+        installUpdate,
+        installYtDlp,
+        isDownloading,
+        openFolder,
+        refreshYtDlpVersion,
+        selectedDownloadFolder,
+        setDefaultOption,
+        updateState,
+        updateYtDlp,
+        ytDlpVersion,
     } from "$lib/utils";
+    import Icon from "$lib/components/Icon.svelte";
+    import ExtensionSelect from "$lib/components/ExtensionSelect.svelte";
 
-    let localFormat = $defaultFormat;
-    let localEmbed = $embedMetadata;
-    let localAudioExt = $defaultAudioExtension;
-    let localVideoExt = $defaultVideoExtension;
-    let isCheckingDeps = false;
-    let isUpdatingYtDlp = false;
+    let busyTool: "yt-dlp" | "ffmpeg" | null = null;
+    let versionRequested = false;
 
-    // Track changes
-    $: hasChanges = localFormat !== $defaultFormat || 
-        localEmbed !== $embedMetadata ||
-        localAudioExt !== $defaultAudioExtension ||
-        localVideoExt !== $defaultVideoExtension;
-    
-    // Update local values when store values change
-    $: localFormat = $defaultFormat;
-    $: localEmbed = $embedMetadata;
-    $: localAudioExt = $defaultAudioExtension;
-    $: localVideoExt = $defaultVideoExtension;
-
-    const unsubFormat = defaultFormat.subscribe((value) => {
-        if (!hasChanges) localFormat = value;
-    });
-
-    const unsubEmbed = embedMetadata.subscribe((value) => {
-        if (!hasChanges) localEmbed = value;
-    });
-
-    const unsubAudioExt = defaultAudioExtension.subscribe((value) => {
-        if (!hasChanges) localAudioExt = value;
-    });
-
-    const unsubVideoExt = defaultVideoExtension.subscribe((value) => {
-        if (!hasChanges) localVideoExt = value;
-    });
-
-    onDestroy(() => {
-        unsubFormat();
-        unsubEmbed();
-        unsubAudioExt();
-        unsubVideoExt();
-    });
-
-    function validateExtension(ext: string): boolean {
-        if (!ext.trim()) return true; // Optional field
-        return /^[a-z0-9]+$/i.test(ext.trim());
+    // Getting the version means starting yt-dlp, which is slow. Only do it once it's needed.
+    $: if ($activeTab === "settings" && $dependencyStatus?.yt_dlp_installed && !versionRequested) {
+        versionRequested = true;
+        refreshYtDlpVersion();
     }
 
-    async function handleCheckDeps() {
-        isCheckingDeps = true;
-        try {
-            await checkDependenciesOnLaunch();
-            setStatus("✓ Dependency check complete!", "success");
-        } catch (error) {
-            setStatus("Failed to check dependencies", "error");
-            console.error(error);
-        } finally {
-            isCheckingDeps = false;
-        }
-    }
+    $: ffmpegLabel =
+        $dependencyStatus?.ffmpeg_source === "Bundled" ? "Using the copy bundled with this app" : "Installed";
 
-    async function handleUpdateYtDlp() {
-        isUpdatingYtDlp = true;
-        try {
-            const result = await updateYtDlp();
-            if ("error_code" in result && result.error_code) {
-                setStatus(`Update failed: ${result.message}`, "error");
-            } else {
-                setStatus("✓ yt-dlp updated successfully!", "success");
-                // Re-check dependencies after update
-                await checkDependenciesOnLaunch();
-            }
-        } catch (error) {
-            setStatus("Failed to update yt-dlp", "error");
-            console.error(error);
-        } finally {
-            isUpdatingYtDlp = false;
-        }
-    }
-
-    async function handleInstallFfmpeg() {
-        try {
-            const result = await installFfmpeg();
-            if ("error_code" in result && result.error_code) {
-                setStatus(`FFmpeg install failed: ${result.message}`, "error");
-            } else {
-                setStatus("✓ FFmpeg installed successfully!", "success");
-                // Re-check dependencies after install
-                await checkDependenciesOnLaunch();
-            }
-        } catch (error) {
-            setStatus("Failed to install FFmpeg", "error");
-            console.error(error);
-        }
-    }
-
-    async function saveAllSettings() {
-        // Validate extensions
-        if (!validateExtension(localAudioExt)) {
-            setStatus("Audio extension should only contain letters and numbers (e.g., mp3, m4a).", "error");
-            return;
-        }
-
-        if (!validateExtension(localVideoExt)) {
-            setStatus("Video extension should only contain letters and numbers (e.g., mp4, mkv).", "error");
-            return;
-        }
-
-        let folderSaved = false;
-        
-        // Save folder if set
-        if ($selectedDownloadFolder) {
-            folderSaved = await saveDownloadFolderSetting();
-        }
-
-        // Save format preference
-        await updateSettingsWithKey(SETTINGS_KEYS.DEFAULT_FORMAT.id, localFormat);
-        defaultFormat.set(localFormat);
-
-        // Save embed preference
-        await updateSettingsWithKey(SETTINGS_KEYS.EMBED_METADATA.id, localEmbed);
-        embedMetadata.set(localEmbed);
-
-        // Save audio extension preference
-        await updateSettingsWithKey(SETTINGS_KEYS.DEFAULT_AUDIO_EXTENSION.id, localAudioExt);
-        defaultAudioExtension.set(localAudioExt);
-
-        // Save video extension preference
-        await updateSettingsWithKey(SETTINGS_KEYS.DEFAULT_VIDEO_EXTENSION.id, localVideoExt);
-        defaultVideoExtension.set(localVideoExt);
-
-        hasChanges = false;
-
-        setStatus(
-            folderSaved
-                ? "All settings saved successfully with new folder!"
-                : "Settings saved successfully!",
-            "success"
-        );
-    }
-
-    async function handleBrowse() {
-        await browseFolder();
-        hasChanges = true;
+    async function runTool(tool: "yt-dlp" | "ffmpeg", action: () => Promise<void>) {
+        busyTool = tool;
+        await action();
+        busyTool = null;
     }
 </script>
 
-<div class="settings-container">
-    <div class="settings-header">
-        <h3>⚙️ Settings</h3>
-        <p class="subtitle">Configure your download preferences</p>
-    </div>
+<div class="page">
+    <h1 class="page-title">Settings</h1>
 
-    <div class="settings-grid">
-        <!-- Dependency Status Card -->
-        <div class="settings-card">
-            <div class="card-section">
-                <h4>🔧 Dependencies</h4>
-                <p class="section-description">Manage required tools for downloads</p>
-
-                <div class="deps-status">
-                    {#if $dependencyStatus}
-                        <!-- yt-dlp Status -->
-                        <div class="dep-item">
-                            <span class="dep-label">yt-dlp</span>
-                            <span class="dep-value">
-                                {#if $dependencyStatus.yt_dlp_installed}
-                                    <span class="status-badge status-ready">✓ Ready</span>
-                                    {#if $dependencyStatus.yt_dlp_version}
-                                        <span class="version-text">({$dependencyStatus.yt_dlp_version})</span>
-                                    {/if}
-                                {:else}
-                                    <span class="status-badge status-missing">✗ Missing</span>
-                                {/if}
-                            </span>
-                        </div>
-
-                        <!-- FFmpeg Status -->
-                        <div class="dep-item">
-                            <span class="dep-label">FFmpeg</span>
-                            <span class="dep-value">
-                                {#if $dependencyStatus.ffmpeg_source === "System"}
-                                    <span class="status-badge status-ready">✓ System</span>
-                                {:else if $dependencyStatus.ffmpeg_source === "Bundled"}
-                                    <span class="status-badge status-bundled">✓ Bundled</span>
-                                {:else}
-                                    <span class="status-badge status-missing">✗ Missing</span>
-                                {/if}
-                            </span>
-                        </div>
-                    {:else}
-                        <div class="loading-text">Checking dependencies...</div>
-                    {/if}
-                </div>
-
-                <div class="button-group">
-                    <button 
-                        class="action-btn check-btn"
-                        on:click={handleCheckDeps}
-                        disabled={isCheckingDeps}
+    <section>
+        <div class="section-header"><h2 class="section-title">Download folder</h2></div>
+        <div class="panel card">
+            <div class="setting">
+                <p class="folder-path selectable" title={$selectedDownloadFolder ?? ""}>
+                    {$selectedDownloadFolder ?? "No folder selected"}
+                </p>
+                {#if $selectedDownloadFolder}
+                    <button
+                        type="button"
+                        class="btn btn-ghost"
+                        on:click={() => $selectedDownloadFolder && openFolder($selectedDownloadFolder)}
                     >
-                        {#if isCheckingDeps}
-                            ⟳ Checking...
-                        {:else}
-                            ✓ Check Now
-                        {/if}
+                        Open
                     </button>
-                    
-                    {#if $dependencyStatus?.yt_dlp_installed}
-                        <button 
-                            class="action-btn update-btn"
-                            on:click={handleUpdateYtDlp}
-                            disabled={isUpdatingYtDlp}
-                        >
-                            {#if isUpdatingYtDlp}
-                                ⟳ Updating...
-                            {:else}
-                                ⬆ Update yt-dlp
-                            {/if}
-                        </button>
-                    {/if}
-
-                    {#if $dependencyStatus?.ffmpeg_source === "Missing"}
-                        <button 
-                            class="action-btn install-btn"
-                            on:click={handleInstallFfmpeg}
-                        >
-                            ⬇ Install FFmpeg
-                        </button>
-                    {/if}
-                </div>
-            </div>
-        </div>
-
-        <!-- Download Folder Card -->
-        <div class="settings-card">
-            <div class="card-section">
-                <h4>📁 Download Folder</h4>
-                <p class="section-description">Choose where downloaded files will be saved</p>
-                
-                <div class="folder-display">
-                    {#if $selectedDownloadFolder}
-                        <span class="folder-path">{$selectedDownloadFolder}</span>
-                    {:else}
-                        <span class="folder-placeholder">No folder selected</span>
-                    {/if}
-                </div>
-
-                <button class="browse-btn" on:click={handleBrowse}>
-                    📂 Browse Folders
+                {/if}
+                <button type="button" class="btn" on:click={browseFolder}>
+                    <Icon name="folder" size={14} /> Change
                 </button>
             </div>
         </div>
+    </section>
 
-        <!-- Default Settings Card -->
-        <div class="settings-card">
-            <div class="card-section">
-                <h4>🎛️ Default Options</h4>
-                <p class="section-description">Set your preferred download options</p>
-
-                <label class="field">
-                    <span class="label-text">Default Format</span>
-                    <select bind:value={localFormat}>
-                        <option value={FORMATS.AUDIO}>🎵 Audio (mp3)</option>
-                        <option value={FORMATS.VIDEO}>🎬 Video (mp4)</option>
-                    </select>
-                </label>
-
-                <label class="field">
-                    <span class="label-text">Default Audio Extension</span>
-                    <input
-                        type="text"
-                        placeholder="mp3, m4a, wav, etc."
-                        bind:value={localAudioExt}
-                        maxlength="10"
-                    />
-                    <span class="help-text">Leave blank for auto-detection</span>
-                </label>
-
-                <label class="field">
-                    <span class="label-text">Default Video Extension</span>
-                    <input
-                        type="text"
-                        placeholder="mp4, mkv, webm, etc."
-                        bind:value={localVideoExt}
-                        maxlength="10"
-                    />
-                    <span class="help-text">Leave blank for auto-detection</span>
-                </label>
-
-                <label class="checkbox-field">
-                    <input type="checkbox" bind:checked={localEmbed} />
-                    <span>Embed artwork & metadata by default</span>
-                </label>
-
-                <div class="info-box">
-                    <span class="info-icon">ℹ️</span>
-                    <p>These settings will be used as defaults for new downloads. You can override them per download.</p>
+    <section>
+        <div class="section-header"><h2 class="section-title">Download defaults</h2></div>
+        <div class="panel card">
+            <div class="setting">
+                <div class="setting-text">
+                    <p>Type</p>
+                    <p class="hint">What the download pages start with</p>
+                </div>
+                <div class="segmented control" role="group" aria-label="Default type">
+                    <button
+                        type="button"
+                        class:active={$defaultOptions.format === FORMATS.AUDIO}
+                        aria-pressed={$defaultOptions.format === FORMATS.AUDIO}
+                        on:click={() => setDefaultOption("format", FORMATS.AUDIO)}
+                    >
+                        <Icon name="music" size={14} /> Audio
+                    </button>
+                    <button
+                        type="button"
+                        class:active={$defaultOptions.format === FORMATS.VIDEO}
+                        aria-pressed={$defaultOptions.format === FORMATS.VIDEO}
+                        on:click={() => setDefaultOption("format", FORMATS.VIDEO)}
+                    >
+                        <Icon name="video" size={14} /> Video
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Save Button -->
-    <div class="save-section">
-        {#if hasChanges}
-            <div class="changes-indicator">
-                <span class="indicator-dot"></span>
-                <span>Unsaved changes</span>
+            <label class="setting">
+                <span class="setting-text">Audio file format</span>
+                <span class="control">
+                    <ExtensionSelect
+                        format="audio"
+                        value={$defaultOptions.audioExtension}
+                        on:change={(event) => setDefaultOption("audioExtension", event.detail)}
+                    />
+                </span>
+            </label>
+
+            <label class="setting">
+                <span class="setting-text">Video file format</span>
+                <span class="control">
+                    <ExtensionSelect
+                        format="video"
+                        value={$defaultOptions.videoExtension}
+                        on:change={(event) => setDefaultOption("videoExtension", event.detail)}
+                    />
+                </span>
+            </label>
+
+            <label class="setting">
+                <span class="setting-text">Embed artwork and metadata</span>
+                <input
+                    class="toggle"
+                    type="checkbox"
+                    checked={$defaultOptions.embed}
+                    on:change={(event) => setDefaultOption("embed", event.currentTarget.checked)}
+                />
+            </label>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-header">
+            <h2 class="section-title">Tools</h2>
+            <button type="button" class="btn btn-ghost btn-small" on:click={checkDependencies}>Check again</button>
+        </div>
+        <div class="panel card">
+            <div class="setting">
+                <div class="setting-text">
+                    <p>yt-dlp</p>
+                    <p class="hint">
+                        {#if !$dependencyStatus}
+                            Checking…
+                        {:else if $dependencyStatus.yt_dlp_installed}
+                            {$ytDlpVersion ? `Version ${$ytDlpVersion}` : "Installed"}
+                        {:else}
+                            Not installed
+                        {/if}
+                    </p>
+                </div>
+                {#if $dependencyStatus?.yt_dlp_installed}
+                    <button
+                        type="button"
+                        class="btn"
+                        disabled={busyTool !== null}
+                        on:click={() => runTool("yt-dlp", updateYtDlp)}
+                    >
+                        {#if busyTool === "yt-dlp"}<span class="spinner"></span> Updating…{:else}Update{/if}
+                    </button>
+                {:else if $dependencyStatus}
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        disabled={busyTool !== null}
+                        on:click={() => runTool("yt-dlp", installYtDlp)}
+                    >
+                        {#if busyTool === "yt-dlp"}<span class="spinner"></span> Installing…{:else}Install{/if}
+                    </button>
+                {/if}
             </div>
-        {/if}
-        <button class="save-btn" class:has-changes={hasChanges} on:click={saveAllSettings}>
-            💾 Save All Settings
-        </button>
-    </div>
+
+            <div class="setting">
+                <div class="setting-text">
+                    <p>FFmpeg</p>
+                    <p class="hint">
+                        {#if !$dependencyStatus}
+                            Checking…
+                        {:else if $dependencyStatus.ffmpeg_source === "Missing"}
+                            Not installed
+                        {:else}
+                            {ffmpegLabel}
+                        {/if}
+                    </p>
+                </div>
+                {#if $dependencyStatus?.ffmpeg_source === "Missing"}
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        disabled={busyTool !== null}
+                        on:click={() => runTool("ffmpeg", installFfmpeg)}
+                    >
+                        {#if busyTool === "ffmpeg"}<span class="spinner"></span> Installing…{:else}Install{/if}
+                    </button>
+                {/if}
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <div class="section-header"><h2 class="section-title">About</h2></div>
+        <div class="panel card">
+            <div class="setting">
+                <div class="setting-text">
+                    <p>Andy's Downloader {$appVersion ? `v${$appVersion}` : ""}</p>
+                    <p class="hint selectable">
+                        {#if $updateState.phase === "checking"}
+                            Checking for updates…
+                        {:else if $updateState.phase === "current"}
+                            You're on the latest version
+                        {:else if $updateState.phase === "available"}
+                            Version {$updateState.version} is available
+                        {:else if $updateState.phase === "installing"}
+                            Installing version {$updateState.version}…
+                        {:else if $updateState.phase === "error"}
+                            Update failed: {$updateState.message}
+                        {:else}
+                            Updates are checked each time the app starts
+                        {/if}
+                    </p>
+                </div>
+                {#if $updateState.phase === "available"}
+                    <button
+                        type="button"
+                        class="btn btn-primary"
+                        disabled={$isDownloading || $bulkRunning}
+                        on:click={installUpdate}
+                    >
+                        Update and restart
+                    </button>
+                {:else}
+                    <button
+                        type="button"
+                        class="btn"
+                        disabled={$updateState.phase === "checking" || $updateState.phase === "installing"}
+                        on:click={() => checkForUpdates()}
+                    >
+                        Check for updates
+                    </button>
+                {/if}
+            </div>
+        </div>
+    </section>
 </div>
 
 <style lang="scss">
-    @import "$lib/styles/global.scss";
-
-    .settings-container {
-        width: 100%;
-        height: 100%;
+    .card {
         display: flex;
         flex-direction: column;
-        gap: 1.5rem;
-        padding: 1rem;
-        overflow-y: auto;
-        box-sizing: border-box;
-
-        @media (max-width: 768px) {
-            padding: 0.75rem;
-            gap: 1rem;
-        }
-
-        @media (max-width: 480px) {
-            padding: 0.5rem;
-            gap: 0.75rem;
-        }
     }
 
-    .settings-header {
-        h3 {
-            margin: 0 0 0.25rem 0;
-            font-size: 1.6rem;
-            color: $text;
-
-            @media (max-width: 768px) {
-                font-size: 1.4rem;
-            }
-
-            @media (max-width: 480px) {
-                font-size: 1.25rem;
-            }
-        }
-
-        .subtitle {
-            margin: 0;
-            color: $text-muted;
-            font-size: 0.9rem;
-
-            @media (max-width: 480px) {
-                font-size: 0.8rem;
-            }
-        }
-    }
-
-    .settings-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        gap: 1.5rem;
-        flex: 1;
-
-        @media (max-width: 768px) {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        @media (max-width: 480px) {
-            gap: 0.75rem;
-        }
-    }
-
-    .settings-card {
-        background: $bg1;
-        border: 1px solid $border;
-        border-radius: 1rem;
-        padding: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        display: flex;
-        flex-direction: column;
-        min-width: 0; // Prevent overflow
-
-        @media (max-width: 768px) {
-            padding: 1.25rem;
-            border-radius: 0.75rem;
-        }
-
-        @media (max-width: 480px) {
-            padding: 1rem;
-            border-radius: 0.5rem;
-        }
-    }
-
-    .card-section {
-        display: flex;
-        flex-direction: column;
-        gap: 1.25rem;
-
-        h4 {
-            margin: 0;
-            font-size: 1.1rem;
-            color: $text;
-        }
-
-        .section-description {
-            margin: -0.75rem 0 0 0;
-            font-size: 0.8rem;
-            color: $text-muted;
-            line-height: 1.4;
-        }
-    }
-
-    .folder-display {
-        padding: 1rem;
-        background: $surface;
-        border: 1px solid $border;
-        border-radius: 0.7rem;
-        min-height: 60px;
+    .setting {
         display: flex;
         align-items: center;
-        justify-content: center;
-
-        .folder-path {
-            color: $text;
-            font-family: $font-mono;
-            font-size: 0.85rem;
-            text-align: center;
-            word-break: break-all;
-            line-height: 1.4;
-        }
-
-        .folder-placeholder {
-            color: $text-muted;
-            font-style: italic;
-            font-size: 0.9rem;
-        }
-    }
-
-    .browse-btn {
-        padding: 0.8rem 1.2rem;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid $border;
-        border-radius: 0.7rem;
-        color: $text;
-        font-size: 0.95rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.12);
-            border-color: $accent;
-            transform: translateY(-1px);
-        }
-
-        &:active {
-            transform: translateY(0);
-        }
-
-        @media (max-width: 480px) {
-            padding: 0.7rem 1rem;
-            font-size: 0.9rem;
-        }
-    }
-
-    .field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.4rem;
-
-        .label-text {
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: $text;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-
-            @media (max-width: 480px) {
-                font-size: 0.8rem;
-            }
-        }
-
-        input,
-        select {
-            padding: 0.7rem 0.9rem;
-            background: $surface;
-            border: 1px solid $border;
-            border-radius: 0.6rem;
-            color: $text;
-            font-family: $font-ui;
-            font-size: 0.95rem;
-            cursor: pointer;
-            transition: border-color 0.2s ease;
-            width: 100%;
-            box-sizing: border-box;
-
-            &:focus {
-                outline: none;
-                border-color: $accent;
-            }
-
-            @media (max-width: 480px) {
-                padding: 0.6rem 0.8rem;
-                font-size: 0.9rem;
-            }
-        }
-
-        .help-text {
-            font-size: 0.75rem;
-            color: $text-muted;
-            font-style: italic;
-            margin-top: -0.2rem;
-
-            @media (max-width: 480px) {
-                font-size: 0.7rem;
-            }
-        }
-    }
-
-    .checkbox-field {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        color: $text;
-        cursor: pointer;
-        padding: 0.5rem;
-        border-radius: 0.5rem;
-        transition: background-color 0.2s ease;
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.03);
-        }
-
-        input[type="checkbox"] {
-            width: 1.1rem;
-            height: 1.1rem;
-            cursor: pointer;
-        }
-
-        span {
-            font-size: 0.9rem;
-        }
-    }
-
-    .info-box {
-        display: flex;
-        gap: 0.7rem;
-        padding: 0.9rem;
-        background: rgba(77, 136, 255, 0.1);
-        border-left: 3px solid #4d88ff;
-        border-radius: 0.5rem;
-        align-items: flex-start;
-
-        .info-icon {
-            font-size: 1.1rem;
-            flex-shrink: 0;
-        }
-
-        p {
-            margin: 0;
-            font-size: 0.8rem;
-            color: $text-muted;
-            line-height: 1.5;
-        }
-    }
-
-    .save-section {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 1rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid $border;
-    }
-
-    .changes-indicator {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: $accent;
-        font-size: 0.85rem;
-        font-weight: 500;
-
-        .indicator-dot {
-            width: 8px;
-            height: 8px;
-            background: $accent;
-            border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-    }
-
-    @keyframes pulse {
-        0%, 100% {
-            opacity: 1;
-        }
-        50% {
-            opacity: 0.5;
-        }
-    }
-
-    .save-btn {
-        padding: 0.9rem 2rem;
-        background: transparent;
-        border: 1px solid $border;
-        border-radius: 0.7rem;
-        color: $text;
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s ease;
-
-        &:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: $accent;
-        }
-
-        &.has-changes {
-            background: linear-gradient(135deg, $accent, lighten($accent, 10%));
-            border-color: $accent;
-            color: $bg0;
-            box-shadow: 0 4px 15px rgba(254, 198, 0, 0.3);
-
-            &:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(254, 198, 0, 0.4);
-            }
-
-            &:active {
-                transform: translateY(0);
-            }
-        }
-    }
-
-    @media (max-width: 768px) {
-        .settings-grid {
-            grid-template-columns: 1fr;
-        }
-
-        .save-section {
-            flex-direction: column;
-            align-items: stretch;
-
-            .save-btn {
-                width: 100%;
-            }
-        }
-    }
-
-    .deps-status {
-        display: flex;
-        flex-direction: column;
-        gap: 0.8rem;
-        padding: 0.9rem;
-        background: $surface;
-        border: 1px solid $border;
-        border-radius: 0.6rem;
-    }
-
-    .dep-item {
-        display: flex;
         justify-content: space-between;
-        align-items: center;
-        gap: 1rem;
+        gap: 16px;
+        min-height: 56px;
+        padding: 10px 16px;
 
-        .dep-label {
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: $text;
-            min-width: 80px;
-        }
-
-        .dep-value {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            flex: 1;
-            justify-content: flex-end;
-
-            .status-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.3rem;
-                padding: 0.4rem 0.8rem;
-                border-radius: 0.4rem;
-                font-size: 0.8rem;
-                font-weight: 500;
-                white-space: nowrap;
-
-                &.status-ready {
-                    background: rgba(72, 187, 120, 0.15);
-                    color: #48bb78;
-                }
-
-                &.status-bundled {
-                    background: rgba(237, 137, 54, 0.15);
-                    color: #ed8936;
-                }
-
-                &.status-missing {
-                    background: rgba(245, 101, 101, 0.15);
-                    color: #f56565;
-                }
-            }
-
-            .version-text {
-                font-size: 0.75rem;
-                color: $text-muted;
-                font-weight: normal;
-            }
+        & + .setting {
+            border-top: 1px solid var(--line);
         }
     }
 
-    .loading-text {
-        text-align: center;
-        padding: 0.5rem;
-        color: $text-muted;
-        font-size: 0.9rem;
-    }
-
-    .button-group {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-        gap: 0.7rem;
-        margin-top: 0.3rem;
-    }
-
-    .action-btn {
-        padding: 0.6rem 0.8rem;
-        border: 1px solid $border;
-        border-radius: 0.5rem;
-        background: rgba(255, 255, 255, 0.05);
-        color: $text;
-        font-size: 0.8rem;
+    .setting-text {
+        flex: 1;
+        min-width: 0;
+        font-size: 13px;
         font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-
-        &:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: $accent;
-            transform: translateY(-1px);
-        }
-
-        &:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        &.check-btn:not(:disabled):hover {
-            border-color: #48bb78;
-            color: #48bb78;
-        }
-
-        &.update-btn:not(:disabled):hover {
-            border-color: #4299e1;
-            color: #4299e1;
-        }
-
-        &.install-btn:not(:disabled):hover {
-            border-color: #9f7aea;
-            color: #9f7aea;
-        }
     }
 
+    .hint {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--text-muted);
+    }
+
+    .control {
+        width: 220px;
+        flex-shrink: 0;
+    }
+
+    .folder-path {
+        flex: 1;
+        min-width: 0;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .toggle {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--accent);
+        cursor: pointer;
+    }
 </style>

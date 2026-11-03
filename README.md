@@ -4,6 +4,19 @@ A modern, elegant desktop application for downloading audio and video content us
 
 ![File Downloader](https://img.shields.io/badge/Tauri-2.8+-blue) ![Svelte](https://img.shields.io/badge/Svelte-5.0+-orange) ![Rust](https://img.shields.io/badge/Rust-1.77+-red)
 
+## Install
+
+Download the `.msi` from the [latest release](https://github.com/Lancito01/file-downloader/releases/latest) and run it. The app checks for new versions when it starts and offers to update itself. It never updates in the middle of a download.
+
+## Releasing
+
+1. Set the same new version in `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`.
+2. Commit that to `main`, then tag and push it: `git tag v1.2.3 && git push origin main v1.2.3`.
+
+The Release workflow builds and signs the MSI, then publishes it with the `latest.json` the updater reads.
+
+Updates are signed with the key in the `TAURI_SIGNING_PRIVATE_KEY` repository secret. Keep a backup of it: installed copies only accept updates signed with that key, so if it's lost, users have to reinstall by hand.
+
 ## 🚀 Quick Start
 
 ### Option 1: Easy Launch (Recommended)

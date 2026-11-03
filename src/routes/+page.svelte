@@ -1,255 +1,133 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { SETTINGS_KEYS } from "$lib/assets/keys";
+    import { getVersion } from "@tauri-apps/api/app";
     import {
-        readSettingsWithKey,
-        status,
-        updateStatus,
-        getStatusColor,
-        initializeSettings,
-        checkYtDlpInstalled,
-        installYtDlp,
-        checkFfmpegInstalled,
-        installFfmpeg,
-        checkDependenciesOnLaunch,
-        isDependenciesReady,
-    } from "$lib/utils.ts";
-    import {
-        selectedDownloadFolder,
+        activeTab,
+        appVersion,
         browseFolder,
-        saveDownloadFolderSetting,
-    } from "$lib/utils.ts";
-    import { firstRun } from "$lib/utils.ts";
-    import { activeTab } from "$lib/utils.ts";
+        checkDependencies,
+        checkForUpdates,
+        firstRun,
+        initializeSettings,
+        isReady,
+        setStatus,
+    } from "$lib/utils";
 
     import Single from "./tabs/Single.svelte";
     import Bulk from "./tabs/Bulk.svelte";
     import Settings from "./tabs/Settings.svelte";
     import Nav from "./Nav.svelte";
     import StatusBar from "./StatusBar.svelte";
-
-    // Automatic changing of status color based on detection of status.type
-    $: statusColor = getStatusColor($status?.type ?? null);
-
-    async function ensureYtDlpInstalled() {
-        try {
-            const installed = await checkYtDlpInstalled();
-            if (installed) return;
-
-            const shouldInstall = window.confirm(
-                "yt-dlp is required for downloads but was not found on this machine. Install it now?"
-            );
-
-            if (!shouldInstall) {
-                updateStatus({
-                    type: "error",
-                    message: "yt-dlp is not installed. Please install it to enable downloads.",
-                });
-                return;
-            }
-
-            updateStatus({
-                type: "info",
-                message: "Installing yt-dlp...",
-            });
-
-            const result = await installYtDlp();
-            updateStatus({
-                type: result.success ? "success" : "error",
-                message: result.message,
-            });
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            updateStatus({
-                type: "error",
-                message: `yt-dlp install failed: ${message}`,
-            });
-        }
-    }
-
-    async function ensureFfmpegInstalled() {
-        try {
-            const installed = await checkFfmpegInstalled();
-            if (installed) return;
-
-            const shouldInstall = window.confirm(
-                "ffmpeg and ffprobe are required for downloads but were not found on this machine. Install them now?"
-            );
-
-            if (!shouldInstall) {
-                updateStatus({
-                    type: "error",
-                    message: "ffmpeg/ffprobe are not installed. Please install them to enable downloads.",
-                });
-                return;
-            }
-
-            updateStatus({
-                type: "info",
-                message: "Installing ffmpeg/ffprobe...",
-            });
-
-            const result = await installFfmpeg();
-            updateStatus({
-                type: result.success ? "success" : "error",
-                message: result.message,
-            });
-        } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            updateStatus({
-                type: "error",
-                message: `ffmpeg install failed: ${message}`,
-            });
-        }
-    }
+    import Icon from "$lib/components/Icon.svelte";
+    import DependencyBanner from "$lib/components/DependencyBanner.svelte";
+    import UpdateBanner from "$lib/components/UpdateBanner.svelte";
 
     onMount(async () => {
-        // ! Initialization of settings store
-        await initializeSettings();
-
-        const downloadFolder: string | null = await readSettingsWithKey(
-            SETTINGS_KEYS.MUSIC_FOLDER_PATH.id
-        );
-        if (!downloadFolder) {
-            firstRun.set(true);
-            updateStatus({
-                type: "error",
-                message: "Please set your default Music folder to continue.",
-            });
-        } else {
-            firstRun.set(false);
+        try {
+            await initializeSettings();
+        } catch (error) {
+            setStatus(`Failed to load settings: ${error}`, "error");
         }
+        isReady.set(true);
 
-        // * Set initial status
-        updateStatus({
-            type: "info",
-            message: "Idle 🌙",
-        });
-
-        // Check dependencies on launch
-        await checkDependenciesOnLaunch();
-
-        await ensureYtDlpInstalled();
-        await ensureFfmpegInstalled();
+        // Not awaited: the window stays usable while this runs
+        checkDependencies();
+        getVersion().then((version) => appVersion.set(version));
+        if (!import.meta.env.DEV) checkForUpdates(true);
     });
 </script>
 
-<div class="app-container">
-    <div class="app flex flex-col h-full">
-        <Nav />
-        <div
-            class="render-tab flex justify-center items-center p-1.5 z-40 w-full h-full grow"
-        >
-            {#if $firstRun}
-                <div
-                    class="first-run-overlay flex flex-col items-center justify-center w-full text-center"
-                >
-                    <h1>Welcome to Andy's Downloader!</h1>
-                    <p>Please configure your settings to get started.</p>
-                    <div class="settings flex flex-col mt-1 gap-2.5">
-                        <div class="musicFolder">
-                            <h4>1️⃣ First, choose your default Music folder:</h4>
-                            <button on:click={browseFolder}>Select Music Folder</button>
-                            {#if $selectedDownloadFolder}
-                                <p>{$selectedDownloadFolder}</p>
-                            {/if}
-                        </div>
-                    </div>
-                    <div class="flex flex-col mt-4">
-                        <h2 class="text-lg">Everything looks good? ⬇️</h2>
-                        <button
-                            class="w-1/2 max-w-20 self-center text-center"
-                            on:click={saveDownloadFolderSetting}>Save</button
-                        >
-                    </div>
+<div class="app">
+    {#if $isReady && $firstRun}
+        <main class="welcome">
+            <div class="welcome-card panel">
+                <h1>Welcome to Andy's Downloader</h1>
+                <p>Choose the folder your downloads should go to. You can change it later in Settings.</p>
+                <button type="button" class="btn btn-primary btn-large" on:click={browseFolder}>
+                    <Icon name="folder" /> Choose download folder
+                </button>
+            </div>
+        </main>
+    {:else if $isReady}
+        <div class="workspace">
+            <Nav />
+            <main class="content">
+                <div class="banner-slot">
+                    <DependencyBanner />
+                    <UpdateBanner />
                 </div>
-            {:else}
-                <div
-                    class="container flex flex-col w-full h-full rounded-lg items-center max-w-full p-5"
-                >
-                    {#if $activeTab == "single"}
-                        <Single />
-                    {:else if $activeTab == "bulk"}
-                        <Bulk />
-                    {:else if $activeTab == "settings"}
-                        <Settings />
-                    {/if}
-                </div>
-            {/if}
+                <!-- Tabs stay mounted so typed links and running queues survive switching -->
+                <div hidden={$activeTab !== "single"}><Single /></div>
+                <div hidden={$activeTab !== "bulk"}><Bulk /></div>
+                <div hidden={$activeTab !== "settings"}><Settings /></div>
+            </main>
         </div>
-        <StatusBar />
-    </div>
+    {/if}
+    <StatusBar />
 </div>
 
 <style lang="scss">
-    @import "$lib/styles/global.scss";
-    .app-container {
-        background-color: $bg0;
-        color: $text;
+    .app {
         height: 100vh;
         width: 100vw;
-        min-height: 0;
-        overflow: hidden;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
+    }
 
-        font-family: $font-ui;
+    .workspace {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+    }
+
+    .content {
+        flex: 1;
+        min-width: 0;
+        overflow-y: auto;
+    }
+
+    .banner-slot {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 0 32px;
+
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+
+        &:has(:global(.banner)) {
+            padding-top: 16px;
+            margin-bottom: -12px;
+        }
+    }
+
+    .welcome {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .welcome-card {
+        max-width: 440px;
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+
         h1 {
-            width: auto;
-            height: auto;
+            font-size: 22px;
+            font-weight: 650;
+            letter-spacing: -0.01em;
         }
 
-        .app {
-            flex: 1;
-            min-height: 0;
-            display: flex;
-            flex-direction: column;
-            
-            .render-tab {
-                background-color: $bg0;
-                position: relative;
-                flex: 1;
-                min-height: 0;
-                overflow: hidden;
-
-                .first-run-overlay {
-                    height: 100%;
-                    background-color: $surface-alt;
-                    overflow-y: auto;
-                    padding: 1rem;
-                    box-sizing: border-box;
-
-                    @media (max-width: 768px) {
-                        padding: 0.75rem;
-                    }
-
-                    @media (max-width: 480px) {
-                        padding: 0.5rem;
-                    }
-
-                    .settings {
-                        > * {
-                            margin: 5px 0;
-                            display: flex;
-                            flex-direction: column;
-                            width: 100%;
-
-                            padding: 5px;
-                            background: $bg1;
-                            border-radius: 5px;
-
-                            align-items: center;
-                        }
-                    }
-                }
-
-                .container {
-                    background-color: $bg1;
-                    overflow-y: auto;
-                    height: 100%;
-                    min-height: 0;
-                }
-            }
+        p {
+            color: var(--text-muted);
+            margin-bottom: 10px;
         }
     }
 </style>

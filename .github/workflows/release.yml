@@ -35,6 +35,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
         with:
           tagName: ${{ github.ref_name }}
+          # GitHub renames the apostrophe in the default file name, and then the action can't find its files to write latest.json
+          assetNamePattern: Andys-Downloader_[version]_[arch][ext]
           releaseName: Andy's Downloader ${{ github.ref_name }}
           releaseBody: Download the .msi below to install. Existing installs update themselves.
           releaseDraft: false
